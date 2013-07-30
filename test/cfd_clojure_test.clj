@@ -62,7 +62,10 @@
                         2.0
                         1.0)))
 
-(let [c 1 nx 81 dx 0.025 nt 25 dt 0.025 u0 (set-u0 nx dx)]
+(let [c 1 nx 81 dx 0.025 nt 25 dt 0.025
+      x (map #(* % dx) (range nx))
+      u0 (set-u0 nx dx)
+      u (linear-convection u0 c nx dx nt dt)]
   (fact u0
         => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
@@ -73,7 +76,7 @@
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.])
 
-  (fact (linear-convection u0 c nx dx nt dt)
+  (fact u
         => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
@@ -81,10 +84,25 @@
             1.  1.  1.  1.  1.  2.  2.  2.  2.  2.
             2.  2.  2.  2.  2.  2.  2.  2.  2.  2.
             2.  2.  2.  2.  2.  2.  1.  1.  1.  1.
-            1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.]))
+            1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.])
+  (doto
+      (xy-plot x u0
+               :title "Linear Convection"
+               :x-label "x (nx=81)"
+               :y-label "u(x,0) / u(x,0.625)"
+               :legend true)
+    (add-lines x u)
+    view))
 
 
-(let [c 1 nx 41 dx 0.05 nt 25 dt 0.025 u0 (set-u0 nx dx)]
+(let [c 1 nx 41 dx 0.05 nt 25 dt 0.025
+      x (map #(* % dx) (range nx))
+      u0 (set-u0 nx dx)
+      u1 (linear-convection u0 c nx dx 1 dt)
+      u5 (linear-convection u0 c nx dx 5 dt)
+      u12 (linear-convection u0 c nx dx 12 dt)
+      u17 (linear-convection u0 c nx dx 17 dt)
+      u (linear-convection u0 c nx dx nt dt)]
   (fact u0 => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
                2.  2.  2.  2.  2.  2.  2.  2.  2.  2.
                2.  1.  1.  1.  1.  1.  1.  1.  1.  1.
@@ -93,7 +111,7 @@
   ; precision of 10^-4 works on the REPL, but not in lein midje
   ; hence reduced to 10^-3:
   ;
-  (fact (map #(format-x % 3) (linear-convection u0 c nx dx nt dt))
+  (fact (map #(format-x % 3) u)
         => (map #(format-x % 3)
                 [1.00045526  1.00007826  1.00000972  1.00000077  1.00000003  1.          1.
                  1.          1.          1.          1.00000003  1.00000077  1.00000972
@@ -101,7 +119,19 @@
                  1.11476147  1.21217811  1.34501895  1.49999923  1.6549713   1.78774363
                  1.88478327  1.94408527  1.97104073  1.97104073  1.94408527  1.88478327
                  1.78774363  1.6549713   1.49999923  1.34501895  1.21217811  1.11476147
-                 1.05387607  1.02164263  1.00731665  1.00203866])))
+                 1.05387607  1.02164263  1.00731665  1.00203866]))
+  (doto
+      (xy-plot x u0
+               :title "Linear Convection"
+               :x-label "x (nx=41)"
+               :y-label "u(x,0) / u(x,0.025) / ... / u(x,0.625)"
+               :legend true)
+    (add-lines x u1)
+    (add-lines x u5)
+    (add-lines x u12)
+    (add-lines x u17)
+    (add-lines x u)
+    view))
 
 
 
