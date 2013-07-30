@@ -13,4 +13,4 @@ The project uses [Midje](https://github.com/marick/Midje/).
 ## License
 
 CFD Python is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
-CFD Clojure is distributed under the Eclipse Public License, the same as Clojure.
+CFD Clojure © 2013 Friedrich Boeckh, distributed under the Eclipse Public License, the same as Clojure.
