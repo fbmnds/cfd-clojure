@@ -1,5 +1,6 @@
 (ns cfd-clojure-test
-  (:use midje.sweet)
+  (:use midje.sweet
+        (incanter core charts))
   (:require [cfd-clojure :refer :all]))
 
 
@@ -62,10 +63,14 @@
                         2.0
                         1.0)))
 
-(let [c 1 nx 81 dx 0.025 nt 25 dt 0.025
+(let [nx 81.
+      dx (/ 2. (dec nx))
+      nt 25
+      m {:c 1 :x-steps 2 :dx dx :dt 0.025}
       x (map #(* % dx) (range nx))
       u0 (set-u0 nx dx)
-      u (linear-convection u0 c nx dx nt dt)]
+      u (take (inc nt) (discretize linear-convection m u0))
+      u_nt (last u)]
   (fact u0
         => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
@@ -76,7 +81,7 @@
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.])
 
-  (fact u
+  (fact u_nt
         => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
             1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
@@ -91,27 +96,31 @@
                :x-label "x (nx=81)"
                :y-label "u(x,0) / u(x,0.625)"
                :legend true)
-    (add-lines x u)
+    (add-lines x u_nt)
     view))
 
 
-(let [c 1 nx 41 dx 0.05 nt 25 dt 0.025
+(let [nx 41.
+      dx (/ 2. (dec nx))
+      nt 25
+      m {:c 1 :x-steps 2 :dx dx :dt 0.025}
       x (map #(* % dx) (range nx))
       u0 (set-u0 nx dx)
-      u1 (linear-convection u0 c nx dx 1 dt)
-      u5 (linear-convection u0 c nx dx 5 dt)
-      u12 (linear-convection u0 c nx dx 12 dt)
-      u17 (linear-convection u0 c nx dx 17 dt)
-      u (linear-convection u0 c nx dx nt dt)]
+      u (take (inc nt) (discretize linear-convection m u0))
+      u1 (second u)
+      u5 (nth u 6)
+      u12 (nth u 13)
+      u17 (nth u 18)
+      u_nt (last u)]
   (fact u0 => [1.  1.  1.  1.  1.  1.  1.  1.  1.  1.
                2.  2.  2.  2.  2.  2.  2.  2.  2.  2.
                2.  1.  1.  1.  1.  1.  1.  1.  1.  1.
                1.  1.  1.  1.  1.  1.  1.  1.  1.  1.  1.])
 
-  ; precision of 10^-4 works on the REPL, but not in lein midje
+  ; precision of 10^-5 fails only for the first 3 values 1.00045526  1.00007826  1.00000972
   ; hence reduced to 10^-3:
   ;
-  (fact (map #(format-x % 3) u)
+  (fact (map #(format-x % 3) u_nt)
         => (map #(format-x % 3)
                 [1.00045526  1.00007826  1.00000972  1.00000077  1.00000003  1.          1.
                  1.          1.          1.          1.00000003  1.00000077  1.00000972
@@ -130,7 +139,7 @@
     (add-lines x u5)
     (add-lines x u12)
     (add-lines x u17)
-    (add-lines x u)
+    (add-lines x u_nt)
     view))
 
 

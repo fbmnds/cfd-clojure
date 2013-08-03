@@ -1,5 +1,5 @@
 (defproject cfd-clojure "0.0.1-SNAPSHOT"
-  :description "CFD Python port to Clojurex"
+  :description "CFD Python port to Clojure"
   :dependencies [[org.clojure/clojure "1.5.1"]
 
                  [incanter/incanter-core "1.5.0-SNAPSHOT"]
