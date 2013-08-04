@@ -3,10 +3,13 @@
 
 
 
-
 (defn discretize [f m u]
-  (let [g (fn [u] (conj (map #(f m %) (partition (:x-steps m) 1 u)) (first u)))]
-    (iterate g u)))
+  (let [l (last u)
+        g (fn [u] (conj (map #(f m %) (partition (:x-steps m) 1 u)) (first u)))
+        h (fn [u] (g (concat u [l])))]
+    (if (= 2 (:x-steps m))
+      (iterate g u)
+      (iterate h u))))
 
 
 

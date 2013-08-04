@@ -13,6 +13,8 @@ dt = sigma*dx**2/nu #dt is defined using sigma ... more later!
 u = np.ones(nx)      #a numpy array with nx elements all equal to 1.
 u[.5/dx : 1/dx+1]=2  #setting u = 2 between 0.5 and 1 as per our I.C.s
 
+print (u)
+
 un = np.ones(nx) #our placeholder array, un, to advance the solution in time
 
 for n in range(nt):  #iterate through time
@@ -20,6 +22,8 @@ for n in range(nt):  #iterate through time
     for i in range(1,nx-1):
         u[i] = un[i] + nu*dt/dx**2*(un[i+1]-2*un[i]+un[i-1])
 
+print ("nx, dx, nt, dt, sigma, nu:\n--------------------------")
+print (nx, dx, nt, dt, sigma, nu)
 print (u)
 plt.plot(np.linspace(0,2,nx), u)
 plt.show()
