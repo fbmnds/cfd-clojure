@@ -11,6 +11,8 @@ The project uses [Midje](https://github.com/marick/Midje/).
 
 This assumes a valid Gnu environment in place. For Windows, [GoW](https://github.com/bmatzelle/gow/wiki) is recommended.
 
+`lein midje :filter -mpeg` will run all tests without generation graphics/animation. The tests support further filtering ([Midje filters])(https://github.com/marick/Midje/wiki/Using-metadata-to-filter-facts#lein-midje-command-line-arguments) by using `:step1 ...`.
+
 ## License
 
 CFD Python is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
