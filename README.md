@@ -7,8 +7,9 @@ Prof. Lorena Barba, Dr. Rio Yokota, [CFD Python: 12 steps to Navier-Stokes](http
 
 The project uses [Midje](https://github.com/marick/Midje/).
 
-`lein midje` will run all tests.
+`lein midje` will run all tests and generate graphics/animation.
 
+This assumes a valid Gnu environment in place. For Windows, [GoW](https://github.com/bmatzelle/gow/wiki) is recommended.
 
 ## License
 

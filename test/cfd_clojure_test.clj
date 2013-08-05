@@ -169,14 +169,14 @@
        n (cond (< 99 t) (str t)
                (< 9 t) (clojure.string/join ["0" (str t)])
                :else (clojure.string/join ["00" (str t)]))
-       fname (clojure.string/join [".\\mpeg\\linear-convection-" n ".png"])
+       fname (clojure.string/join ["./mpeg/linear-convection-" n ".png"])
        fos (FileOutputStream. fname)]
     (save p fos)
     (if (= 0 (mod t 100)) (println "... " (- 1000 t)))
     (.close fos)))
 
-(print "purging .\\mpeg ... ")
-(sh "rm" ".\\mpeg\\*")
+(print "purging ./mpeg ... ")
+(sh "rm" "./mpeg/*")
 (println "done.\ncalculating Linear Convection (nt=1000) ... ")
 (let [nx 41.
       dx (/ 2. (dec nx))
@@ -186,7 +186,7 @@
       u0 (set-u0 nx dx)
       u (take nt (discretize linear-convection m u0))]
   (doall (map #(save-frame x % (nth u %)) (range (count u)))))
-(println "done.\nencoding of .\\mpeg\\linear-convection.mp4 ... ")
+(println "done.\nencoding of ./mpeg/linear-convection.mp4 ... ")
 ;;
 ;; ffmpeg -r 100 -b 20M -i linear-convection-%03d.png linear-convection.mp4
 ;;
