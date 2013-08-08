@@ -17,7 +17,7 @@
              [2 nil] (iterate g u)
              [3 nil] (iterate h u)
              [3 burgers-bc-err] (iterate (comp h0 (:bc m) g0) u)
-             ;[3 _] (iterate (comp g0 (:bc m)) u)
+             [3 _] (iterate (comp h0 g0 (:bc m)) u)
              ;; :else throw IllegalArgumentException
              )))
 
@@ -54,15 +54,23 @@
        4.)))
 
 
-
-(defn burgers-bc [u]
-  (concat (conj u (last (butlast u))) [(second u)]))
-
-
+;; In the given model, u0 and u101 refer to the same location modulo 2*pi.
+;; Hence, the same location is used twice in updating the BC.
+;; This is most likely a bug.
+;;
 (defn burgers-bc-err [g0u]
   (let [[u0 u1 u2] (vec (first g0u))
         [u99 u100 u101] (vec (last g0u))]
     (concat (conj g0u [u101 u0 u1]) [[u100 u101 u0]])))
+
+
+;; (~ denotes 2*pi periodicy)
+;; if un[0] ~ un[nx]
+;; then un[1] ~ un[nx + 1]
+;; and un[-1] ~ un[nx - 1]
+;;
+(defn burgers-bc [u]
+  (concat (conj u (last (butlast u))) [(second u)]))
 
 
 (defn burgers-eqn [m [u_ni-1 u_ni u_ni+1]]
