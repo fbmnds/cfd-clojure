@@ -105,7 +105,9 @@
         k (* -1. (:c m) (:dt m))
         kx (/ k (:dx m))
         ky (/ k (:dy m))
-        u_core (sel (plus (mult (+ 1. kx ky) A) B C)
+        u_core (sel (plus (mult (+ 1. kx ky) A)
+                          (mult (* -1. kx) B)
+                          (mult (* -1. ky) C))
                     :except-rows (dec upper_y)
                     :except-cols (dec upper_x))
         v (make-array Double/TYPE (:ny m) (:nx m))]
@@ -113,6 +115,6 @@
             x (range (:nx m))]
       (if (or (= y 0) (= y upper_y)
               (= x 0) (= x upper_x))
-        1.
+        (aset v y x 1.)
         (aset v y x (sel u_core (dec y) (dec x)))))
     (matrix v)))
