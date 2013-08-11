@@ -22,6 +22,9 @@
              )))
 
 
+(defn discretize-2D [f m u]
+  (iterate (partial f m) u))
+
 
 ;; Step 1
 
@@ -82,28 +85,34 @@
        (* nu (/ dt (* dx dx)) (+ u_ni+1 (* -2. u_ni) u_ni-1)))))
 
 
+;; Step 5
 
-
-
-
-
-
-
-
-(comment
-(defn burgers [f m u]
-  (let [un+1 (second u)
-        un-0 (first u)
-        un-1 (last u)
-        un-2 (last (butlast u))
-        u_bc (fn [un-0 un-1 un-2] (+ un-1
-                                    (* un-1 (/ dt dx) (- un-2 un-1))
-                                    (* nu (/ dt (* dx dx)) (+ un-0 (* -2. un-1) un-2))))
-        u-1 (u_bc un-0 un-1 un-2)
-        u-0 (u_bc un+1 un-0 un-1)
-        g (fn [u] (conj (map #(f m %) (partition (:x-steps m) 1 u)) u-0))]
-    (g (concat u [u-1]))))
+(comment ; http://jspha.com/clatrix/
+(doseq [i (range n)
+        j (range n)]
+  (aset ary i j (fun i j)))
 )
 
 
-;; un[-1] - un[-1] * dt/dx * (un[-1] - un[-2]) + nu*dt/dx**2*(un[0]-2*un[-1]+un[-2])
+;; reuse memory, i.e. overwrite un
+;;
+(defn linear-convection-2D [m un]
+  (let [upper_x (dec (:nx m)) ; cols
+        upper_y (dec (:ny m)) ; rows
+        A (sel un :except-rows 0 :except-cols 0)
+        B (sel un :except-rows upper_y :except-cols 0)
+        C (sel un :except-rows 0 :except-cols upper_x)
+        k (* -1. (:c m) (:dt m))
+        kx (/ k (:dx m))
+        ky (/ k (:dy m))
+        u_core (sel (plus (mult (+ 1. kx ky) A) B C)
+                    :except-rows (dec upper_y)
+                    :except-cols (dec upper_x))
+        v (make-array Double/TYPE (:ny m) (:nx m))]
+    (doseq [y (range (:ny m))
+            x (range (:nx m))]
+      (if (or (= y 0) (= y upper_y)
+              (= x 0) (= x upper_x))
+        1.
+        (aset v y x (sel u_core (dec y) (dec x)))))
+    (matrix v)))

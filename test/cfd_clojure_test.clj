@@ -1,7 +1,8 @@
 (ns cfd-clojure-test
   (:use midje.sweet
         (incanter core charts))
-  (:require [cfd-clojure :refer :all]))
+  (:require [cfd-clojure :refer :all]
+            [clojure.data.json :as json]))
 
 (import 'java.io.FileOutputStream)
 (use '[clojure.java.shell :only [sh]])
@@ -65,13 +66,21 @@
   (Math/sqrt (reduce + (map (comp #(* % %) #(apply - %)) (map vector u v)))))
 
 
+(defn- shape [z dz]
+  (if (and (>= z (/ 0.5 dz))
+           (< z (inc (/ 1. dz))))
+    2.
+    1.))
 
-(defn- set-u0 [nx dx]
-  (for [x (range nx)] (if (and (>= x (/ 0.5 dx))
-                               (< x (inc (/ 1.0 dx))))
-                        2.0
-                        1.0)))
-
+(defn- set-u0
+  ([nx dx]
+     (for [x (range nx)] (shape x dx)))
+  ([ny dy nx dx] ; y rows, x cols
+     (let [u0 (make-array Double/TYPE ny nx)]
+       (doseq [y (range ny)
+               x (range nx)]
+         (aset u0 y x (if (= 2. (shape x dx) (shape y dy)) 2. 1.)))
+       (matrix u0))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -491,6 +500,28 @@
 )
     ))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 5: 2D Linear Convection
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(let [nx 81
+      ny 81
+      nt 100
+      dx (/ 2. (dec nx))
+      dy (/ 2. (dec ny))
+      sigma 0.2
+      dt (* sigma dx)
+      c 1.
+      m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
+      u0 (set-u0 ny dy nx dx)
+      u (take (inc nt) (discretize-2D linear-convection-2D m u0))
+      u_nt (last u)
+      res (json/read-json (slurp "./test/cfd_clojure/python/test-05.json"))]
+  (fact "u0" :step5
+        u0 => (:u0 res)))
 
 
 ;; restore settings

@@ -18,7 +18,9 @@
                  [swingrepl "1.3.0"
                   :exclusions [org.clojure/clojure
                                org.clojure/clojure-contrib]]
-                 [jline "0.9.94"]]
+                 [jline "0.9.94"]
+
+                 [org.clojure/data.json "0.2.2"]]
 
   :profiles {:dev {:dependencies [[midje "1.5.1"]]}}
   :repl-options {:port 4555})
