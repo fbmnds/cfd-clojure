@@ -20,6 +20,8 @@
                                org.clojure/clojure-contrib]]
                  [jline "0.9.94"]
 
+                 [clatrix "0.3.0"]
+
                  [org.clojure/data.json "0.2.2"]]
 
   :profiles {:dev {:dependencies [[midje "1.5.1"]]}}

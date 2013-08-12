@@ -1,6 +1,7 @@
 (ns cfd-clojure
   (:require [clojure.math.numeric-tower :as math]
-            [clojure.core.match :as m])
+            [clojure.core.match :as m]
+            [clatrix.core :as clx])
   (:use (incanter core charts)))
 
 ;; provide discretisation linear in t and up to second order in x
@@ -93,6 +94,8 @@
   (aset ary i j (fun i j)))
 )
 
+;; https://www.refheap.com/16132/raw
+
 
 (defn linear-convection-2D [m un]
   (let [upper_x (dec (:nx m)) ; cols
@@ -108,11 +111,8 @@
                           (mult (* -1. ky) C))
                     :except-rows (dec upper_y)
                     :except-cols (dec upper_x))
-        v (make-array Double/TYPE (:ny m) (:nx m))]
-    (doseq [y (range (:ny m))
-            x (range (:nx m))]
-      (if (or (= y 0) (= y upper_y)
-              (= x 0) (= x upper_x))
-        (aset v y x 1.)
-        (aset v y x (sel u_core (dec y) (dec x)))))
-    (matrix v)))
+        v (matrix 1. (:ny m) (:nx m))]
+    (doseq [y (range 1 upper_y)
+            x (range 1 upper_x)]
+      (clx/set v y x (sel u_core (dec y) (dec x))))
+    v))
