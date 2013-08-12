@@ -111,7 +111,7 @@
 
 ;; Step 6:
 
-(defn linear-convection-2-2D [m un vn]
+(defn convection-2D [m [un vn]]
   (let [upper_x (dec (:nx m)) ; cols
         upper_y (dec (:ny m)) ; rows
         Au (sel un :except-rows 0 :except-cols 0)

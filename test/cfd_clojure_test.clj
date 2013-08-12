@@ -601,6 +601,56 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn test-convection-2D [c nx ny nt sigma]
+ (let [dx (/ 2. (dec nx))
+       dy (/ 2. (dec ny))
+       dt (* sigma dx)
+       m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
+       u0 (set-u0 ny dy nx dx)
+       v0 u0
+       w (take (inc nt) (discretize-2D convection-2D m [u0 v0]))
+       u (map first w)
+       v (map second w)
+       u_nt (last u)
+       v_nt (last v)
+       res (json/read-json
+            (slurp (str/join
+                    ["./test/cfd_clojure/python/test-06-" nx ".json"])))
+       u_nt_py (:u_nt res)
+       v_nt_py (:v_nt res)]
+   (fact "params " :step6
+         [nx dx ny dy nt dt c sigma]
+         => [(:nx res) (:dx res)
+             (:ny res) (:dy res)
+             (inc (:nt res)) (:dt res)
+             (:c res) (:sigma res)])
+   (fact "u0, v0" :step6
+         [u0 v0 (= u0 v0)] => [(:u0 res) (:v0 res) (= (:u0 res) (:v0 res))])
+   (fact "[(first u) (first v)] is [u0 v0]" :step6
+         [(first u) (first v)] => [(:u0 res) (:v0 res)])
+   (fact "dimensions u0, v0 : nx, ny" :step6
+         [(count u0) (count (first u0))
+          (count (:u0 res)) (count (first (:u0 res)))
+          (count v0) (count (first v0))
+          (count (:v0 res)) (count (first (:v0 res)))]
+         => [ny nx ny nx
+             ny nx ny nx])
+   (fact "dimensions u_nt, u_nt: nx, ny" :step6
+         [(count u_nt) (count (first u_nt))
+          (count u_nt_py) (count (first u_nt_py))
+          (count v_nt) (count (first v_nt))
+          (count v_nt_py) (count (first v_nt_py))]
+         => [ny nx ny nx
+             ny nx ny nx])
+   (fact "u_nt, v_nt" :step6
+         [(format-zz u_nt 5) (format-zz v_nt 5)]
+         => [(format-zz u_nt_py 5) (format-zz v_nt_py 5)])))
+
+
+(fact
+ "Step 5: 2D Convection" :step6
+ (test-convection-2D 1 41 21 1 0.2)
+ (test-convection-2D 1 81 81 50 0.2))
 
 ;; restore settings
 ;;
