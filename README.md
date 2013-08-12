@@ -9,6 +9,7 @@ Prof. Lorena Barba, Dr. Rio Yokota, [CFD Python: 12 steps to Navier-Stokes](http
 - Step 2: Non-Linear Convection
 - Step 3: 1D Diffusion
 - Step 4: Burgers' Equation
+- Step 5: 2D Linear Convection
 
 ### How to run the models
 

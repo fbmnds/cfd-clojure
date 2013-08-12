@@ -3,7 +3,7 @@ from mpl_toolkits.mplot3d import Axes3D    ##New Library required for projected 
 import numpy as np
 import matplotlib.pyplot as plt
 
-f = open('test-05.json','w')
+
 
 ###
 
@@ -20,9 +20,9 @@ def print_u (f, label1, u, ny, nx, label2):
 
 
 ###variable declarations
-nx = 41
-ny = 21
-nt = 0
+nx = 81
+ny = 81
+nt = 49
 c = 1
 dx = 2.0/(nx-1)
 dy = 2.0/(ny-1)
@@ -35,6 +35,8 @@ y = np.linspace(0,2,ny)
 u = np.ones((ny,nx)) ##create a 1xn vector of 1's
 un = np.ones((ny,nx)) ##
 
+f = open(''.join(['test-05-', str(nx), '.json']),'w')
+
 f.write("{ \"nx\" : ")
 f.write(str(nx))
 f.write(", \"dx\" : ")
@@ -43,6 +45,8 @@ f.write(", \"ny\" : ")
 f.write(str(ny))
 f.write(", \"dy\" : ")
 f.write(str(dy))
+f.write(", \"nt\" : ")
+f.write(str(nt))
 f.write(", \"dt\" : ")
 f.write(str(dt))
 f.write(", \"c\" : ")

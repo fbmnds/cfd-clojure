@@ -2,7 +2,8 @@
   (:use midje.sweet
         (incanter core charts))
   (:require [cfd-clojure :refer :all]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [clojure.string :as str]))
 
 (import 'java.io.FileOutputStream)
 (use '[clojure.java.shell :only [sh]])
@@ -548,18 +549,21 @@
        u (take (inc nt) (discretize-2D linear-convection-2D m u0))
        u_nt (last u)
        v (apply concat u_nt)
-       res (json/read-json (slurp "./test/cfd_clojure/python/test-05.json"))
+       res (json/read-json
+            (slurp (str/join
+                    ["./test/cfd_clojure/python/test-05-" nx ".json"])))
        u_nt_py (:u_nt res)
        v_py (apply concat u_nt_py)]
    (fact "params " :step5
-         [nx dx ny dy dt c sigma]
+         [nx dx ny dy nt dt c sigma]
          => [(:nx res) (:dx res)
              (:ny res) (:dy res)
-             (:dt res) (:c res) (:sigma res)])
+             (inc (:nt res)) (:dt res)
+             (:c res) (:sigma res)])
    (fact "u0" :step5
          u0 => (:u0 res))
    (fact "(first u) is u0" :step5
-      (first u) => (:u0 res))
+         (first u) => (:u0 res))
    (fact "dimensions u0: nx, ny" :step5
          [(count u0) (count (first u0))
           (count (:u0 res)) (count (first (:u0 res)))]
@@ -571,24 +575,73 @@
 
    (fact "u_nt" :step5
          (format-zz u_nt 5) => (format-zz u_nt_py 5))
-(comment
-   (fact "Euklid distance 'Python/Clojure' < 0.00001 "
-         :step5
-         (< (/ (* 2. (euklid v v_py))
-               (+ (euklid v (repeat (count v) 0))
-                  (euklid v_py (repeat (count v_py) 0)))) 0.00001)
-         => truthy)
-   ;;(println "u_41 " (nth u 41))
-   ;;(println "u_41_py " (nth (:u_nt res) 41))
 
-   (fact "v v_py :"
-         :step5
-         (count (filter #(> (Math/abs %) 0.001) (map (fn [x] (format-x x 5))
-                                                     (map #(apply - %)
-                                                          (map vector v v_py)))))
-         => 10))
-);; comment
- )
+   )
+
+
+ (let [nx 81
+       ny 81
+       nt 50
+       dx (/ 2. (dec nx))
+       dy (/ 2. (dec ny))
+       sigma 0.2
+       dt (* sigma dx)
+       c 1
+       m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
+       u0 (set-u0 ny dy nx dx)
+       u (take (inc nt) (discretize-2D linear-convection-2D m u0))
+       u_nt (last u)
+       v (apply concat u_nt)
+       res (json/read-json
+            (slurp (str/join
+                    ["./test/cfd_clojure/python/test-05-" nx ".json"])))
+       u_nt_py (:u_nt res)
+       v_py (apply concat u_nt_py)]
+   (fact "params " :step5
+         [nx dx ny dy nt dt c sigma]
+         => [(:nx res) (:dx res)
+             (:ny res) (:dy res)
+             (inc (:nt res)) (:dt res)
+             (:c res) (:sigma res)]
+         (fact "u0" :step5
+               u0 => (:u0 res))
+         (fact "(first u) is u0" :step5
+               (first u) => (:u0 res))
+         (fact "dimensions u0: nx, ny" :step5
+               [(count u0) (count (first u0))
+                (count (:u0 res)) (count (first (:u0 res)))]
+               => [ny nx ny nx])
+         (fact "dimensions u_nt: nx, ny" :step5
+               [(count u_nt) (count (first u_nt))
+                (count u_nt_py) (count (first u_nt_py))]
+               => [ny nx ny nx])
+
+         (fact "u_nt" :step5
+               (format-zz u_nt 4) => (format-zz u_nt_py 4))
+
+         )))
+
+
+(comment
+  (fact "Euklid distance 'Python/Clojure' < 0.00001 "
+        :step5
+        (< (/ (* 2. (euklid v v_py))
+              (+ (euklid v (repeat (count v) 0))
+                 (euklid v_py (repeat (count v_py) 0)))) 0.00001)
+        => truthy)
+  ;;(println "u_41 " (nth u 41))
+  ;;(println "u_41_py " (nth (:u_nt res) 41))
+
+  (fact "v v_py :"
+        :step5
+        (count (filter #(> (Math/abs %) 0.001) (map (fn [x] (format-x x 5))
+                                                    (map #(apply - %)
+                                                         (map vector v v_py)))))
+        => 10)
+  )
+
+
+
 
 ;; restore settings
 ;;
