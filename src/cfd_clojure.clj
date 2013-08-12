@@ -111,6 +111,14 @@
 
 ;; Step 6:
 
+;;u[1:,1:]=un[1:,1:]-(c*dt/dx*(un[1:,1:]-un[0:-1,1:]))-(c*dt/dy*(un[1:,1:]-un[1:,0:-1]))
+;;u[1:,1:]=un[1:,1:]-(un[1:,1:]*dt/dx*(un[1:,1:]-un[0:-1,1:]))-vn[1:,1:]*dt/dy*(un[1:,1:]-un[1:,0:-1])
+;;v[1:,1:]=vn[1:,1:]-(un[1:,1:]*dt/dx*(vn[1:,1:]-vn[0:-1,1:]))-vn[1:,1:]*dt/dy*(vn[1:,1:]-vn[1:,0:-1])
+
+;;u[1:,1:]=Au-(c*dt/dx*(Au-Bu))-(c*dt/dy*(Au-Cu))
+;;u[1:,1:]=Au-(Au*dt/dx*(Au-Bu))-Av*dt/dy*(Au-Cu)
+;;v[1:,1:]=Av-(Au*dt/dx*(Av-Bv))-Av*dt/dy*(Av-Cv)
+
 (defn convection-2D [m [un vn]]
   (let [upper_x (dec (:nx m)) ; cols
         upper_y (dec (:ny m)) ; rows
@@ -120,17 +128,16 @@
         Av (sel vn :except-rows 0 :except-cols 0)
         Bv (sel vn :except-rows upper_y :except-cols 0)
         Cv (sel vn :except-rows 0 :except-cols upper_x)
-        k (* -1. (:c m) (:dt m))
-        kx (/ k (:dx m))
-        ky (/ k (:dy m))
-        u_core (sel (plus (mult (+ 1. kx ky) Au)
-                          (mult (* -1. kx) Bu)
-                          (mult (* -1. ky) Cu))
+        kx (/ (* -1. (:dt m)) (:dx m))
+        ky (/ (* -1. (:dt m)) (:dy m))
+        u_core (sel (plus Au
+                          (mult kx Au (minus Au Bu))
+                          (mult ky Av (minus Au Cu)))
                     :except-rows (dec upper_y)
                     :except-cols (dec upper_x))
-        v_core (sel (plus (mult (+ 1. kx ky) Av)
-                          (mult (* -1. kx) Bv)
-                          (mult (* -1. ky) Cv))
+        v_core (sel (plus Av
+                          (mult kx Au (minus Av Bv))
+                          (mult ky Av (minus Av Cv)))
                     :except-rows (dec upper_y)
                     :except-cols (dec upper_x))
         uu (matrix 1. (:ny m) (:nx m))
