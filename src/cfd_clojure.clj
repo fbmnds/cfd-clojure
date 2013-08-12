@@ -94,8 +94,6 @@
 )
 
 
-;; reuse memory, i.e. overwrite un
-;;
 (defn linear-convection-2D [m un]
   (let [upper_x (dec (:nx m)) ; cols
         upper_y (dec (:ny m)) ; rows

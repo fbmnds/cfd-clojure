@@ -535,30 +535,43 @@
 (fact
  "Step 5: 2D Linear Convection" :step5
 
- (let [nx 81
-       ny 81
-       nt 100
+ (let [nx 41
+       ny 21
+       nt 1
        dx (/ 2. (dec nx))
        dy (/ 2. (dec ny))
        sigma 0.2
        dt (* sigma dx)
-       c 1.
+       c 1
        m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
        u0 (set-u0 ny dy nx dx)
        u (take (inc nt) (discretize-2D linear-convection-2D m u0))
        u_nt (last u)
        v (apply concat u_nt)
        res (json/read-json (slurp "./test/cfd_clojure/python/test-05.json"))
-       u_nt_py (last (partition 81 (:u_nt res)))
+       u_nt_py (:u_nt res)
        v_py (apply concat u_nt_py)]
+   (fact "params " :step5
+         [nx dx ny dy dt c sigma]
+         => [(:nx res) (:dx res)
+             (:ny res) (:dy res)
+             (:dt res) (:c res) (:sigma res)])
    (fact "u0" :step5
          u0 => (:u0 res))
-   (fact "dimensions nx = ny = 81" :step5
+   (fact "(first u) is u0" :step5
+      (first u) => (:u0 res))
+   (fact "dimensions u0: nx, ny" :step5
+         [(count u0) (count (first u0))
+          (count (:u0 res)) (count (first (:u0 res)))]
+         => [ny nx ny nx])
+   (fact "dimensions u_nt: nx, ny" :step5
          [(count u_nt) (count (first u_nt))
-          (count u_nt_py) (count (first u_nt))]
-         => [81 81 81 81])
-   ;; (fact "u_nt" :step5
-   ;;        (format-zz u_nt 3) => (format-zz u_nt_py 3))
+          (count u_nt_py) (count (first u_nt_py))]
+         => [ny nx ny nx])
+
+   (fact "u_nt" :step5
+         (format-zz u_nt 5) => (format-zz u_nt_py 5))
+(comment
    (fact "Euklid distance 'Python/Clojure' < 0.00001 "
          :step5
          (< (/ (* 2. (euklid v v_py))
@@ -574,7 +587,7 @@
                                                      (map #(apply - %)
                                                           (map vector v v_py)))))
          => 10))
-
+);; comment
  )
 
 ;; restore settings
