@@ -88,15 +88,6 @@
 
 ;; Step 5
 
-(comment ; http://jspha.com/clatrix/
-(doseq [i (range n)
-        j (range n)]
-  (aset ary i j (fun i j)))
-)
-
-;; https://www.refheap.com/16132/raw
-
-
 (defn linear-convection-2D [m un]
   (let [upper_x (dec (:nx m)) ; cols
         upper_y (dec (:ny m)) ; rows
@@ -116,3 +107,36 @@
             x (range 1 upper_x)]
       (clx/set v y x (sel u_core (dec y) (dec x))))
     v))
+
+
+;; Step 6:
+
+(defn linear-convection-2-2D [m un vn]
+  (let [upper_x (dec (:nx m)) ; cols
+        upper_y (dec (:ny m)) ; rows
+        Au (sel un :except-rows 0 :except-cols 0)
+        Bu (sel un :except-rows upper_y :except-cols 0)
+        Cu (sel un :except-rows 0 :except-cols upper_x)
+        Av (sel vn :except-rows 0 :except-cols 0)
+        Bv (sel vn :except-rows upper_y :except-cols 0)
+        Cv (sel vn :except-rows 0 :except-cols upper_x)
+        k (* -1. (:c m) (:dt m))
+        kx (/ k (:dx m))
+        ky (/ k (:dy m))
+        u_core (sel (plus (mult (+ 1. kx ky) Au)
+                          (mult (* -1. kx) Bu)
+                          (mult (* -1. ky) Cu))
+                    :except-rows (dec upper_y)
+                    :except-cols (dec upper_x))
+        v_core (sel (plus (mult (+ 1. kx ky) Av)
+                          (mult (* -1. kx) Bv)
+                          (mult (* -1. ky) Cv))
+                    :except-rows (dec upper_y)
+                    :except-cols (dec upper_x))
+        uu (matrix 1. (:ny m) (:nx m))
+        vv (matrix 1. (:ny m) (:nx m))]
+    (doseq [y (range 1 upper_y)
+            x (range 1 upper_x)]
+      (clx/set uu y x (sel u_core (dec y) (dec x)))
+      (clx/set vv y x (sel v_core (dec y) (dec x))))
+    [uu vv]))

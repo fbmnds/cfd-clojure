@@ -26,7 +26,7 @@
 ;; depends on en_US for format consistency
 ;;
 (defn- format-x [x n]
-  (read-string (format (clojure.string/join ["%." (str n) "f"]) (java.math.BigDecimal. x))))
+  (read-string (format (str/join ["%." (str n) "f"]) (java.math.BigDecimal. x))))
 
 (defn- format-zz [zz n]
   (map #(map (fn [x] (format-x x n)) %) zz))
@@ -192,9 +192,9 @@
                    :y-label "u(x,0) ... u(x,0.625) (nt=100)"
                    :legend true)
         n (cond (< 99 t) (str t)
-                (< 9 t) (clojure.string/join ["0" (str t)])
-                :else (clojure.string/join ["00" (str t)]))
-        fname (clojure.string/join ["./mpeg/linear-convection-" n ".png"])
+                (< 9 t) (str/join ["0" (str t)])
+                :else (str/join ["00" (str t)]))
+        fname (str/join ["./mpeg/linear-convection-" n ".png"])
         fos (FileOutputStream. fname)]
      (save p fos)
      (if (= 0 (mod t 100)) (println "... " (- 1000 t)))
@@ -533,17 +533,10 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(fact
- "Step 5: 2D Linear Convection" :step5
-
- (let [nx 41
-       ny 21
-       nt 1
-       dx (/ 2. (dec nx))
+(defn test-linear-convection-2D [c nx ny nt sigma]
+ (let [dx (/ 2. (dec nx))
        dy (/ 2. (dec ny))
-       sigma 0.2
        dt (* sigma dx)
-       c 1
        m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
        u0 (set-u0 ny dy nx dx)
        u (take (inc nt) (discretize-2D linear-convection-2D m u0))
@@ -572,54 +565,15 @@
          [(count u_nt) (count (first u_nt))
           (count u_nt_py) (count (first u_nt_py))]
          => [ny nx ny nx])
-
    (fact "u_nt" :step5
-         (format-zz u_nt 5) => (format-zz u_nt_py 5))
-
-   )
+         (format-zz u_nt 5) => (format-zz u_nt_py 5))))
 
 
- (let [nx 81
-       ny 81
-       nt 50
-       dx (/ 2. (dec nx))
-       dy (/ 2. (dec ny))
-       sigma 0.2
-       dt (* sigma dx)
-       c 1
-       m {:c c :nx nx :dx dx :ny ny :dy dy :dt dt}
-       u0 (set-u0 ny dy nx dx)
-       u (take (inc nt) (discretize-2D linear-convection-2D m u0))
-       u_nt (last u)
-       v (apply concat u_nt)
-       res (json/read-json
-            (slurp (str/join
-                    ["./test/cfd_clojure/python/test-05-" nx ".json"])))
-       u_nt_py (:u_nt res)
-       v_py (apply concat u_nt_py)]
-   (fact "params " :step5
-         [nx dx ny dy nt dt c sigma]
-         => [(:nx res) (:dx res)
-             (:ny res) (:dy res)
-             (inc (:nt res)) (:dt res)
-             (:c res) (:sigma res)]
-         (fact "u0" :step5
-               u0 => (:u0 res))
-         (fact "(first u) is u0" :step5
-               (first u) => (:u0 res))
-         (fact "dimensions u0: nx, ny" :step5
-               [(count u0) (count (first u0))
-                (count (:u0 res)) (count (first (:u0 res)))]
-               => [ny nx ny nx])
-         (fact "dimensions u_nt: nx, ny" :step5
-               [(count u_nt) (count (first u_nt))
-                (count u_nt_py) (count (first u_nt_py))]
-               => [ny nx ny nx])
+(fact
+ "Step 5: 2D Linear Convection" :step5
+ (test-linear-convection-2D 1 41 21 1 0.2)
+ (test-linear-convection-2D 1 81 81 50 0.2))
 
-         (fact "u_nt" :step5
-               (format-zz u_nt 4) => (format-zz u_nt_py 4))
-
-         )))
 
 
 (comment
