@@ -151,19 +151,18 @@
 
 ;; Step 7
 
-;;u[1:-1,1:-1]=un[1:-1,1:-1]+nu*dt/dx**2*(un[2:,1:-1]-2*un[1:-1,1:-1]+un[0:-2,1:-1])+nu*dt/dy**2*(un[1:-1,2:]-2*un[1:-1,1:-1]+un[1:-1,0:-2])
+;;u[1:-1,1:-1]=un[1:-1,1:-1]
+;;            +nu*dt/dx**2*(un[2:,1:-1]-2*un[1:-1,1:-1]+un[0:-2,1:-1])
+;;            +nu*dt/dy**2*(un[1:-1,2:]-2*un[1:-1,1:-1]+un[1:-1,0:-2])
 
 ;;u[1:-1,1:-1]=D+nu*dt/dx**2*(E-2*D+F)+nu*dt/dy**2*(G-2*D+H)
 
 ;;u[1:-1,1:-1]=D+kx*(E-2*D+F)+ky*(G-2*D+H)
 
-;;(comment
 ;;u[1:-1,1:-1] ; D :except-rows  first     last    :except-cols  first     last
 ;;u[2:,1:-1]   ; E :except-rows  first     second  :except-cols  first     last
 ;;u[0:-2,1:-1] ; F :except-rows  prev-last last    :except-cols  first     last
 ;;u[1:-1,0:-2] ; H :except-rows  first     last    :except-cols  prev-last last
-;;)
-
 
 (defn diffusion-2D [m un]
   (let [upper_x (dec (:nx m)) ; cols
@@ -191,3 +190,81 @@
             x (range 1 upper_x)]
       (clx/set v y x (sel u_core (dec y) (dec x))))
     v))
+
+
+;; Step 8:
+
+;; u[1:-1,1:-1] = un[1:-1,1:-1] - dt/dx*un[1:-1,1:-1]*(un[1:-1,1:-1]-un[0:-2,1:-1])-dt/dy*vn[1:-1,1:-1]* \
+;;                (un[1:-1,1:-1]-un[1:-1,0:-2])+nu*dt/dx**2*(un[2:,1:-1]-2*un[1:-1,1:-1]+un[0:-2,1:-1])+ \
+;;                nu*dt/dy**2*(un[1:-1,2:]-2*un[1:-1,1:-1]+un[1:-1,0:-2])
+;;
+;; v[1:-1,1:-1] = vn[1:-1,1:-1] - dt/dx*un[1:-1,1:-1]*(vn[1:-1,1:-1]-vn[0:-2,1:-1])-dt/dy*vn[1:-1,1:-1]* \
+;;                (vn[1:-1,1:-1]-vn[1:-1,0:-2])+nu*dt/dx**2*(vn[2:,1:-1]-2*vn[1:-1,1:-1]+vn[0:-2,1:-1])+ \
+;;                nu*dt/dy**2*(vn[1:-1,2:]-2*vn[1:-1,1:-1]+vn[1:-1,0:-2])
+
+;; z[1:-1,1:-1] ; Dz :except-rows  first     last    :except-cols  first     last
+;; z[2:,1:-1]   ; Ez :except-rows  first     second  :except-cols  first     last
+;; z[0:-2,1:-1] ; Fz :except-rows  prev-last last    :except-cols  first     last
+;; z[1:-1,0:-2] ; Hz :except-rows  first     last    :except-cols  prev-last last
+;; z[1:-1,2:]   ; Jz :except-rows  first     last    :except-cols  first     second
+
+;; u[1:-1,1:-1] = Du - dt/dx*Du*(Du-Fu)-dt/dy*Dv* \
+;;                (Du-Hu)+nu*dt/dx**2*(Eu-2*Du+Fu)+ \
+;;                nu*dt/dy**2*(Ju-2*Du+Hu)
+;;
+;; v[1:-1,1:-1] = Dv - dt/dx*Du*(Dv-Fv)-dt/dy*Dv* \
+;;                (Dv-Hv)+nu*dt/dx**2*(Ev-2*Dv+Fv)+ \
+;;                nu*dt/dy**2*(Jv-2*Dv+Hv)
+
+(defn burgers-eqn-2D [m [un vn]]
+  (let [upper_x (dec (:nx m)) ; cols
+        upper_y (dec (:ny m)) ; rows
+        Du (sel (sel un :except-rows upper_y :except-cols upper_x )
+               :except-rows 0   :except-cols 0)
+        Eu (sel (sel un :except-rows 0 :except-cols upper_x)
+               :except-rows 0 :except-cols 0)
+        Fu (sel (sel un :except-rows upper_y :except-cols upper_x)
+               :except-rows (dec upper_y) :except-cols 0)
+        Gu (sel (sel un :except-rows upper_y :except-cols 0)
+               :except-rows 0 :except-cols 0)
+        Hu (sel (sel un :except-rows upper_y :except-cols upper_x)
+                :except-rows 0 :except-cols (dec upper_x))
+        Ju (sel (sel un :except-rows upper_y :except-cols 0)
+                :except-rows 0 :except-cols 0)
+        Dv (sel (sel vn :except-rows upper_y :except-cols upper_x )
+               :except-rows 0   :except-cols 0)
+        Ev (sel (sel vn :except-rows 0 :except-cols upper_x)
+               :except-rows 0 :except-cols 0)
+        Fv (sel (sel vn :except-rows upper_y :except-cols upper_x)
+               :except-rows (dec upper_y) :except-cols 0)
+        Gv (sel (sel vn :except-rows upper_y :except-cols 0)
+              :except-rows 0 :except-cols 0)
+        Hv (sel (sel vn :except-rows upper_y :except-cols upper_x)
+                :except-rows 0 :except-cols (dec upper_x))
+        Jv (sel (sel vn :except-rows upper_y :except-cols 0)
+                :except-rows 0 :except-cols 0)
+        kx (/ (* -1. (:dt m)) (:dx m))
+        kxx (/ (* (:nu m) kx) (:dx m))
+        ky (/ (* -1. (:dt m)) (:dy m))
+        kyy (/ (* (:nu m) ky) (:dy m))
+        u_core (plus (mult (+ 1. (* 2. kxx) (* 2. kyy)) Du)
+                     (mult kx Du (minus Du Fu))
+                     (mult ky Dv (minus Du Hu))
+                     (mult -1. kxx Eu)
+                     (mult -1. kxx Fu)
+                     (mult -1. kyy Ju)
+                     (mult -1. kyy Hu))
+        v_core (plus (mult (+ 1. (* 2. kxx) (* 2. kyy)) Dv)
+                     (mult kx Du (minus Dv Fv))
+                     (mult ky Dv (minus Dv Hv))
+                     (mult -1. kxx Ev)
+                     (mult -1. kxx Fv)
+                     (mult -1. kyy Jv)
+                     (mult -1. kyy Hv))
+        uu (matrix 1. (:ny m) (:nx m))
+        vv (matrix 1. (:ny m) (:nx m))]
+    (doseq [y (range 1 upper_y)
+            x (range 1 upper_x)]
+      (clx/set uu y x (sel u_core (dec y) (dec x)))
+      (clx/set vv y x (sel v_core (dec y) (dec x))))
+    [uu vv]))

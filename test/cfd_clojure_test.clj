@@ -661,7 +661,7 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn test-diffusion-2D [nu nx ny nt sigma]
+(defn test-diffusion-2D [nx ny nt nu sigma]
  (let [dx (/ 2. (dec nx))
        dy (/ 2. (dec ny))
        dt (/ (* sigma dx dy) nu)
@@ -696,7 +696,66 @@
 
 (fact
  "Step 7: 2D Diffusion" :step7
- (test-diffusion-2D 0.05 31 31 11 0.25))
+ (test-diffusion-2D 31 31 11 0.05 0.25))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 8: 2D Burgers' Equation
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn test-burgers-eqn-2D [nx ny nt nu sigma]
+ (let [dx (/ 2. (dec nx))
+       dy (/ 2. (dec ny))
+       dt (/ (* sigma dx dy) nu)
+       m {:nx nx :dx dx :ny ny :dy dy :dt dt :nu nu}
+       u0 (set-u0 ny dy nx dx)
+       v0 u0
+       w (take (inc nt) (discretize-2D burgers-eqn-2D m [u0 v0]))
+       u (map first w)
+       v (map second w)
+       u_nt (last u)
+       v_nt (last v)
+       res (json/read-json
+            (slurp (str/join
+                    ["./test/cfd_clojure/python/test-08-" nx ".json"])))
+       u_nt_py (:u_nt res)
+       v_nt_py (:v_nt res)]
+   (fact "params " :step8
+         [nx dx ny dy nt dt nu sigma] ; c is irrelevant for Burgers' Eqn.
+         => [(:nx res) (:dx res)
+             (:ny res) (:dy res)
+             (inc (:nt res)) (:dt res)
+             (:nu res) (:sigma res)])
+   (fact "u0, v0" :step8
+         [u0 v0 (= u0 v0)] => [(:u0 res) (:v0 res) (= (:u0 res) (:v0 res))])
+   (fact "[(first u) (first v)] is [u0 v0]" :step8
+         [(first u) (first v)] => [(:u0 res) (:v0 res)])
+   (fact "dimensions u0, v0 : nx, ny" :step8
+         [(count u0) (count (first u0))
+          (count (:u0 res)) (count (first (:u0 res)))
+          (count v0) (count (first v0))
+          (count (:v0 res)) (count (first (:v0 res)))]
+         => [ny nx ny nx
+             ny nx ny nx])
+   (fact "dimensions u_nt, v_nt: nx, ny" :step8
+         [(count u_nt) (count (first u_nt))
+          (count u_nt_py) (count (first u_nt_py))
+          (count v_nt) (count (first v_nt))
+          (count v_nt_py) (count (first v_nt_py))]
+         => [ny nx ny nx
+             ny nx ny nx])
+   (fact "u_nt, v_nt" :step8
+         [(format-zz u_nt 5) (format-zz v_nt 5)]
+         => [(format-zz u_nt_py 5) (format-zz v_nt_py 5)])))
+
+(fact
+ "Step 8: 2D Burgers' Equation" :step8
+ (test-burgers-eqn-2D 21 21 1 0.01 0.0009)
+ (test-burgers-eqn-2D 41 41 121 0.01 0.0009))
+
 
 
 ;; restore settings

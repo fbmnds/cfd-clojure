@@ -38,6 +38,9 @@ print (u[1:-1,2:])
 print ("u[1:-1,0:-2] ; H :except-rows first  :except-rows last :except-cols prev-last :except-cols last   ")
 print (u[1:-1,0:-2])
 
+print ("u[1:-1,2:] ; J :except-rows first  :except-rows last :except-cols first :except-cols second ")
+print (u[1:-1,2:])
+
 print("u[0,:] ; first row ")
 print(u[0,:])
 

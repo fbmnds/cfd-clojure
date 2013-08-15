@@ -20,9 +20,9 @@ def print_u (f, label1, u, ny, nx, label2):
 
 
 ###variable declarations
-nx = 41
-ny = 41
-nt = 120
+nx = 21
+ny = 21
+nt = 0
 c = 1
 dx = 2.0/(nx-1)
 dy = 2.0/(ny-1)
@@ -47,6 +47,8 @@ f.write(", \"dt\" : ")
 f.write(str(dt))
 f.write(", \"c\" : ")
 f.write(str(c))
+f.write(", \"nu\" : ")
+f.write(str(nu))
 f.write(", \"sigma\" : ")
 f.write(str(sigma))
 
