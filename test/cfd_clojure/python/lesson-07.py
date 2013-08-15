@@ -3,6 +3,20 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D ##library for 3d projection plots
 from matplotlib import cm ##cm = "colormap" for changing the 3d plot color palette
 
+###
+
+def print_u (f, label1, u, ny, nx, label2):
+    f.write(label1)
+    for j in range(ny):
+        f.write("[")
+        for i in range(nx):
+            f.write(str(u[j,i]))
+            if i < nx-1:
+                f.write(", ")
+        f.write("]\n")
+    f.write(label2)
+
+
 ###variable declarations
 nx = 31
 ny = 31
@@ -19,9 +33,34 @@ y = np.linspace(0,2,ny)
 u = np.ones((ny,nx)) ##create a 1xn vector of 1's
 un = np.ones((ny,nx)) ##
 
+
+f = open(''.join(['test-07-', str(nx), '.json']),'w')
+
+f.write("{ \"nx\" : ")
+f.write(str(nx))
+f.write(", \"dx\" : ")
+f.write(str(dx))
+f.write(", \"ny\" : ")
+f.write(str(ny))
+f.write(", \"dy\" : ")
+f.write(str(dy))
+f.write(", \"nt\" : ")
+f.write(str(nt))
+f.write(", \"dt\" : ")
+f.write(str(dt))
+f.write(", \"nu\" : ")
+f.write(str(nu))
+f.write(", \"sigma\" : ")
+f.write(str(sigma))
+
+
+
 ###Assign initial conditions
 
 u[.5/dy:1/dy+1,.5/dx:1/dx+1]=2 ##set hat function I.C. : u(.5<=x<=1 && .5<=y<=1 ) is 2
+
+print_u (f, ", \"u0\" : [", u, ny, nx, "],\n")
+
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
@@ -57,3 +96,7 @@ def diffuse(nt):
 
 
 diffuse(10)
+
+print_u(f, "\n \"u_nt\" : [", u[:],ny, nx, "] } ")
+
+f.close()
