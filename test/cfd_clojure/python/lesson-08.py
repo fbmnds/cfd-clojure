@@ -3,6 +3,22 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+
+###
+
+def print_u (f, label1, u, ny, nx, label2):
+    f.write(label1)
+    for j in range(ny):
+        f.write("[")
+        for i in range(nx):
+            f.write(str(u[j,i]))
+            if i < nx-1:
+                f.write(", ")
+        f.write("]\n")
+    f.write(label2)
+
+
 ###variable declarations
 nx = 41
 ny = 41
@@ -13,6 +29,26 @@ dy = 2.0/(ny-1)
 sigma = .0009
 nu = 0.01
 dt = sigma*dx*dy/nu
+
+
+f = open(''.join(['test-08-', str(nx), '.json']),'w')
+
+f.write("{ \"nx\" : ")
+f.write(str(nx))
+f.write(", \"dx\" : ")
+f.write(str(dx))
+f.write(", \"ny\" : ")
+f.write(str(ny))
+f.write(", \"dy\" : ")
+f.write(str(dy))
+f.write(", \"nt\" : ")
+f.write(str(nt))
+f.write(", \"dt\" : ")
+f.write(str(dt))
+f.write(", \"c\" : ")
+f.write(str(c))
+f.write(", \"sigma\" : ")
+f.write(str(sigma))
 
 
 x = np.linspace(0,2,nx)
@@ -28,6 +64,12 @@ comb = np.ones((ny,nx))
 
 u[.5/dy:1/dy+1,.5/dx:1/dx+1]=2 ##set hat function I.C. : u(.5<=x<=1 && .5<=y<=1 ) is 2
 v[.5/dy:1/dy+1,.5/dx:1/dx+1]=2 ##set hat function I.C. : u(.5<=x<=1 && .5<=y<=1 ) is 2
+
+
+print_u (f, ", \"u0\" : [", u, ny, nx, "],\n")
+print_u (f, ", \"v0\" : [", v, ny, nx, "],\n")
+
+
 
 ###(plot ICs)
 fig = plt.figure(figsize=(11,7), dpi=100)
@@ -73,3 +115,10 @@ wire2 = ax.plot_wireframe(X,Y,v[:])
 #ax.set_ylim(1,2)
 #ax.set_zlim(1,5)
 plt.show()
+
+
+# ... printing u takes time ...
+print_u(f, "\n \"u_nt\" : [", u[:],ny, nx, "], ")
+print_u(f, "\n \"v_nt\" : [", v[:],ny, nx, "] } ")
+
+f.close()
