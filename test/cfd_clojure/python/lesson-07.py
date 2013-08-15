@@ -20,7 +20,7 @@ def print_u (f, label1, u, ny, nx, label2):
 ###variable declarations
 nx = 31
 ny = 31
-nt = 17
+nt = 10
 nu=.05
 dx = 2.0/(nx-1)
 dy = 2.0/(ny-1)
@@ -95,7 +95,7 @@ def diffuse(nt):
     plt.show()
 
 
-diffuse(10)
+diffuse(nt)
 
 print_u(f, "\n \"u_nt\" : [", u[:],ny, nx, "] } ")
 

@@ -147,3 +147,47 @@
       (clx/set uu y x (sel u_core (dec y) (dec x)))
       (clx/set vv y x (sel v_core (dec y) (dec x))))
     [uu vv]))
+
+
+;; Step 7
+
+;;u[1:-1,1:-1]=un[1:-1,1:-1]+nu*dt/dx**2*(un[2:,1:-1]-2*un[1:-1,1:-1]+un[0:-2,1:-1])+nu*dt/dy**2*(un[1:-1,2:]-2*un[1:-1,1:-1]+un[1:-1,0:-2])
+
+;;u[1:-1,1:-1]=D+nu*dt/dx**2*(E-2*D+F)+nu*dt/dy**2*(G-2*D+H)
+
+;;u[1:-1,1:-1]=D+kx*(E-2*D+F)+ky*(G-2*D+H)
+
+;;(comment
+;;u[1:-1,1:-1] ; D :except-rows  first     last    :except-cols  first     last
+;;u[2:,1:-1]   ; E :except-rows  first     second  :except-cols  first     last
+;;u[0:-2,1:-1] ; F :except-rows  prev-last last    :except-cols  first     last
+;;u[1:-1,0:-2] ; H :except-rows  first     last    :except-cols  prev-last last
+;;)
+
+
+(defn diffusion-2D [m un]
+  (let [upper_x (dec (:nx m)) ; cols
+        upper_y (dec (:ny m)) ; rows
+        D (sel (sel un :except-rows upper_y :except-cols upper_x )
+               :except-rows 0   :except-cols 0)
+        E (sel (sel un :except-rows 0 :except-cols upper_x)
+               :except-rows 0 :except-cols 0)
+        F (sel (sel un :except-rows upper_y :except-cols upper_x)
+               :except-rows (dec upper_y) :except-cols 0)
+        G (sel (sel un :except-rows upper_y :except-cols 0)
+               :except-rows 0 :except-cols 0)
+        H (sel (sel un :except-rows upper_y :except-cols upper_x)
+               :except-rows 0 :except-cols (dec upper_x))
+        k (* (:nu m) (:dt m))
+        kx (/ k (math/expt (:dx m) 2.))
+        ky (/ k (math/expt (:dy m) 2.))
+        u_core (plus (mult (+ 1. (* -2. kx) (* -2. ky)) D)
+                     (mult kx E)
+                     (mult kx F)
+                     (mult ky G)
+                     (mult ky H))
+        v (matrix 1. (:ny m) (:nx m))]
+    (doseq [y (range 1 upper_y)
+            x (range 1 upper_x)]
+      (clx/set v y x (sel u_core (dec y) (dec x))))
+    v))

@@ -3,7 +3,8 @@
         (incanter core charts))
   (:require [cfd-clojure :refer :all]
             [clojure.data.json :as json]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.math.numeric-tower :as math]))
 
 (import 'java.io.FileOutputStream)
 (use '[clojure.java.shell :only [sh]])
@@ -68,7 +69,7 @@
 
 
 (defn- shape [z dz]
-  (if (and (>= z (/ 0.5 dz))
+  (if (and (>= z (math/floor (/ 0.5 dz))) ; Python implicitely uses 'floor'
            (< z (inc (/ 1. dz))))
     2.
     1.))
@@ -635,7 +636,7 @@
           (count (:v0 res)) (count (first (:v0 res)))]
          => [ny nx ny nx
              ny nx ny nx])
-   (fact "dimensions u_nt, u_nt: nx, ny" :step6
+   (fact "dimensions u_nt, v_nt: nx, ny" :step6
          [(count u_nt) (count (first u_nt))
           (count u_nt_py) (count (first u_nt_py))
           (count v_nt) (count (first v_nt))
@@ -648,9 +649,55 @@
 
 
 (fact
- "Step 5: 2D Convection" :step6
+ "Step 6: 2D Convection" :step6
  (test-convection-2D 1 41 21 1 0.2)
  (test-convection-2D 1 81 81 50 0.2))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 7: 2D Diffusion
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn test-diffusion-2D [nu nx ny nt sigma]
+ (let [dx (/ 2. (dec nx))
+       dy (/ 2. (dec ny))
+       dt (/ (* sigma dx dy) nu)
+       m {:nu nu :nx nx :dx dx :ny ny :dy dy :dt dt}
+       u0 (set-u0 ny dy nx dx)
+       u (take (inc nt) (discretize-2D diffusion-2D m u0))
+       u_nt (last u)
+       res (json/read-json
+            (slurp (str/join
+                    ["./test/cfd_clojure/python/test-07-" nx ".json"])))
+       u_nt_py (:u_nt res)]
+   (fact "params " :step7
+         [nx dx ny dy nt dt nu sigma]
+         => [(:nx res) (:dx res)
+             (:ny res) (:dy res)
+             (inc (:nt res)) (:dt res)
+             (:nu res) (:sigma res)])
+   (fact "u0" :step7
+         [u0 (first u)]  => [(:u0 res) (:u0 res)])
+   (fact "dimensions u0 : nx, ny" :step7
+         [(count u0) (count (first u0))
+          (count (:u0 res)) (count (first (:u0 res)))]
+         => [ny nx ny nx])
+   (fact "dimensions u_nt: nx, ny" :step7
+         [(count u_nt) (count (first u_nt))
+          (count u_nt_py) (count (first u_nt_py))]
+         => [ny nx ny nx])
+   (fact "u_nt" :step7
+         (format-zz u_nt 5) => (format-zz u_nt_py 5))
+   ))
+
+
+(fact
+ "Step 7: 2D Diffusion" :step7
+ (test-diffusion-2D 0.05 31 31 11 0.25))
+
 
 ;; restore settings
 ;;

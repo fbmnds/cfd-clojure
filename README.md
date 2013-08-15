@@ -11,6 +11,7 @@ Prof. Lorena Barba, Dr. Rio Yokota, [CFD Python: 12 steps to Navier-Stokes](http
 - Step 4: Burgers' Equation
 - Step 5: 2D Linear Convection
 - Step 6: Convection 2D
+- Step 7: Diffusion 2D
 
 ### How to run the models
 
@@ -24,5 +25,5 @@ This assumes a valid Gnu environment in place. For Windows, [GoW](https://github
 
 ### License
 
-CFD Python is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 CFD Clojure © 2013 Friedrich Boeckh, distributed under the Eclipse Public License, the same as Clojure.
+CFD Python is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
