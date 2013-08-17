@@ -5,6 +5,30 @@ import numpy as np
 
 
 
+###
+
+def print_u (f, label1, u, ny, nx, label2):
+    f.write(label1)
+    for j in range(ny):
+        f.write("[")
+        for i in range(nx):
+            f.write(str(u[j,i]))
+            if i < nx-1:
+                f.write(", ")
+        f.write("]\n")
+    f.write(label2)
+
+def print_v (f, label1, v, n, label2):
+    f.write(label1)
+    for i in range(n):
+        f.write(str(v[i]))
+        if i < n-1:
+            f.write(", ")
+    f.write(label2)
+
+###
+
+
 def plot2D(x, y, p):
     fig = plt.figure(figsize=(11,7), dpi=100)
     ax = fig.gca(projection='3d')
@@ -42,14 +66,30 @@ def laplace2d(p, y, dx, dy, l1norm_target):
 ##variable declarations
 nx = 31
 ny = 31
-c = 1
+c = 1            ## unused
 dx = 2.0/(nx-1)
 dy = 2.0/(ny-1)
+eps = .01
+
+f = open(''.join(['test-09-', str(nx), '.json']),'w')
+
+f.write("{ \"nx\" : ")
+f.write(str(nx))
+f.write(", \"dx\" : ")
+f.write(str(dx))
+f.write(", \"ny\" : ")
+f.write(str(ny))
+f.write(", \"dy\" : ")
+f.write(str(dy))
+f.write(", \"eps\" : ")
+f.write(str(eps))
+
+f.write(", \"l1norm\" : 1.")  ## hidden parameter
+
 
 
 ##initial conditions
 p = np.zeros((ny,nx)) ##create a XxY vector of 0's
-
 
 ##plotting aids
 x = np.linspace(0,2,nx)
@@ -64,10 +104,15 @@ p[-1,:] = p[-2,:]	##dp/dy = 0 @ y = 1
 
 plot2D(x, y, p)
 
+print_u (f, ", \"p0\" : [", p, ny, nx, "]\n")
+print_v (f, ", \"y0\" : [", y, ny, "]\n")
 
-p = laplace2d(p, y, dx, dy, .01)
+p = laplace2d(p, y, dx, dy, eps)
 
+print_u (f, ", \"p\" : [", p, ny, nx, "] \n")
+print_v (f, ", \"y\" : [", y, ny, "] } \n")    ## redundant check
+f.close()
 
 plot2D(x, y, p)
 
-input(" press ENTER to continue ")
+#input(" press ENTER to continue ")

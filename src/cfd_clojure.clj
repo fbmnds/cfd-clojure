@@ -268,3 +268,67 @@
       (clx/set uu y x (sel u_core (dec y) (dec x)))
       (clx/set vv y x (sel v_core (dec y) (dec x))))
     [uu vv]))
+
+
+;;; Step 9:
+
+;;  l1norm = (np.sum(np.abs(p[:])-np.abs(pn[:])))/np.sum(np.abs(pn[:]))
+;;
+(defn L1-norm [x y]
+  (/ (sum (minus (abs x) (abs y))) (sum (abs y))))
+
+
+;; p[2:,1:-1] ; E :except-rows first  :except-rows second :except-cols first :except-cols last
+;; p[0:-2,1:-1] ; F :except-rows prev-last  :except-rows last :except-cols first :except-cols last
+;; p[1:-1,2:] ; G :except-rows first  :except-rows last :except-cols first :except-cols second
+;; p[1:-1,0:-2] ; H :except-rows first  :except-rows last :except-cols prev-last :except-cols last
+;;
+;; dxx = dx**2/(2*(dx**2+dy**2))
+;; dyy = dy**2/(2*(dx**2+dy**2))
+;;
+;; p[1:-1,1:-1] = dyy(E+F)+dxx*(G+H)
+;; p[0,0] = dyy*(pn[1,0]+pn[-1,0])+dxx*(pn[0,1]+pn[0,-1])
+;; p[-1,-1] = dyy*(pn[0,-1]+pn[-2,-1])+dxx*(pn[-1,0]+pn[-1,-2])
+;;
+;; p[1:-1,1:-1] = (dy**2*(pn[2:,1:-1]+pn[0:-2,1:-1])+dx**2*(pn[1:-1,2:]+pn[1:-1,0:-2]))/(2*(dx**2+dy**2))
+;; p[0,0] = (dy**2*(pn[1,0]+pn[-1,0])+dx**2*(pn[0,1]+pn[0,-1]))/(2*(dx**2+dy**2))
+;; p[-1,-1] = (dy**2*(pn[0,-1]+pn[-2,-1])+dx**2*(pn[-1,0]+pn[-1,-2]))/(2*(dx**2+dy**2))
+;;
+;; p[:,0] = 0		##p = 0 @ x = 0       ;;  redundant:   p[:,0] = const.
+;; p[:,-1] = y		##p = y @ x = 2       ;;  redundant:   y = pn[:,-1] = const.
+;; p[0,:] = p[1,:]	##dp/dy = 0 @ y = 0
+;; p[-1,:] = p[-2,:]	##dp/dy = 0 @ y = 1
+;;
+(defn- f-laplace [dyy dxx upper_y upper_x pn]
+  (let [E (sel (sel pn :excepnt-rows 0 :excepnt-cols upper_x)
+               :excepnt-rows 0 :excepnt-cols 0)
+        F (sel (sel pn :excepnt-rows upper_y :excepnt-cols upper_x)
+               :excepnt-rows (dec upper_y) :excepnt-cols 0)
+        G (sel (sel pn :excepnt-rows upper_y :excepnt-cols 0)
+               :excepnt-rows 0 :excepnt-cols 0)
+        H (sel (sel pn :except-rows upper_y :except-cols upper_x)
+               :except-rows 0 :except-cols (dec upper_x))
+        p_core (plus (mult dyy (plus E F))
+                     (mult dxx (plus G H)))
+        p (matrix pn)]
+    (doseq [y (range 1 upper_y)
+            x (range 1 upper_x)]
+      (clx/set p y x (sel p_core (dec y) (dec x))))
+    (doseq [x (range (inc upper_x))]
+      (clx/set p 0 x (sel p 1 x))
+      (clx/set p upper_y x (sel p (dec upper_y) x)))
+    p))
+
+(defn laplace-eqn-2D [m pn]
+  (let [upper_x (dec (:nx m)) ; cols
+        upper_y (dec (:ny m)) ; rows
+        dx2 (math/expt (:dx m) 2.)
+        dy2 (math/expt (:dy m) 2.)
+        edxdy (* 2. (+ dx2 dy2))
+        dxx (/ dx2 edxdy)
+        dyy (/ dy2 edxdy)]
+    (loop [pn pn
+           p (f-laplace dyy dxx upper_y upper_x pn)]
+      (if (< (L1-norm p pn) (:eps m))
+        p
+        (recur p (f-laplace dyy dxx upper_y upper_x p))))))

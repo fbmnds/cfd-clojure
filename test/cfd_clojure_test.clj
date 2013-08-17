@@ -4,7 +4,9 @@
   (:require [cfd-clojure :refer :all]
             [clojure.data.json :as json]
             [clojure.string :as str]
-            [clojure.math.numeric-tower :as math]))
+            [clojure.math.numeric-tower :as math]
+            [clatrix.core :as clx]
+            [clojure.core.match :as m]))
 
 (import 'java.io.FileOutputStream)
 (use '[clojure.java.shell :only [sh]])
@@ -757,6 +759,50 @@
  (test-burgers-eqn-2D 41 41 121 0.01 0.0009))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 9: 2D Laplace Equation
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ##boundary conditions
+;; p[:,0] = 0		##p = 0 @ x = 0        ;; redundant
+;; p[:,-1] = y		##p = y @ x = 2
+;; p[0,:] = p[1,:]	##dp/dy = 0 @ y = 0
+;; p[-1,:] = p[-2,:]	##dp/dy = 0 @ y = 1
+;;
+(defn- set-p0 [ny nx dy]
+  (let [p0 (matrix 0. ny nx)]
+    (doseq [y (range 1 ny)]
+      (clx/set p0 y (dec nx) (* y dy)))
+    (doseq [x (range nx)]
+      (clx/set p0 0 x (sel p0 1 x)))
+    (doseq [x (range nx)]
+      (clx/set p0 (dec ny) x (sel p0 (- ny 2) x)))
+    p0))
+
+(defn test-laplace-eqn-2D [ny nx eps]
+  (let [dx (/ 2. (dec nx))
+        dy (/ 2. (dec ny))
+        m {:nx nx :dx dx :ny ny :dy dy :eps eps}
+        p0 (set-p0 ny nx (/ dy 2.))
+        res (json/read-json
+             (slurp (str/join
+                     ["./test/cfd_clojure/python/test-09-" nx ".json"])))]
+    (fact "params " :step9
+          [nx dx ny dy eps]
+          => [(:nx res) (:dx res)
+              (:ny res) (:dy res)
+              (:eps res)])
+    (fact "dimensions p0" :step9
+          [(count p0) (count (first p0))]
+          => [ny nx])
+    (fact "p0" :step9
+          (format-zz p0 10) => (format-zz (:p0 res) 10))))
+
+(fact
+ "Step 9: 2D Laplace Equation" :step9
+ (test-laplace-eqn-2D 31 31 0.01))
 
 ;; restore settings
 ;;
