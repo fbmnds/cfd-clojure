@@ -808,6 +808,66 @@
  "Step 9: 2D Laplace Equation" :step9
  (test-laplace-eqn-2D 31 31 0.01))
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 10: 2D Poisson Equation
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn test-poisson-eqn-2D [nx xmin xmax ny ymin ymax nt]
+  (let [upper_x (dec nx)
+        upper_y (dec ny)
+        dx (/ (- xmax xmin) upper_x) ; rows
+        dy (/ (- ymax ymin) upper_y) ; cols
+        b (matrix 0. (dec upper_x) (dec upper_y))
+        _ (clx/set b (dec (/ nx 4)) (dec (/ ny 4)) 100.)
+        _ (clx/set b (dec (/ (* 3 nx) 4)) (dec (/ (* 3 ny) 4)) -100.)
+        res (json/read-json
+             (slurp (str/join
+                     ["./test/cfd_clojure/python/test-10-" nx ".json"])))
+        b_core (sel (sel (:b res) :except-rows upper_x :except-cols upper_y)
+                    :except-rows 0   :except-cols 0)
+        m {:nx nx :dx dx :ny ny :dy dy :b b}
+        p0 (matrix 0. nx ny)
+        p (take (inc nt) (discretize-2D poisson-eqn-2D m p0))
+        p_nt (last p)
+        p_nt_py (:p res)]
+    (fact "params " :step10
+          [nx dx xmin xmax ny dy ymin ymax nt]
+          => [(:nx res) (:dx res)
+              (:xmin res) (:xmax res)
+              (:ny res) (:dy res)
+              (:ymin res) (:ymax res)
+              (:nt res)])
+    (fact "dimensions p0: nx, ny" :step10
+          [(count p0) (count (first p0))
+           (count (:p0 res)) (count (first (:p0 res)))]
+          => [ny nx ny nx])
+    (fact "dimensions b: nx-2, ny-2" :step10
+          [(count b) (count (first b))
+           (count b_core) (count (first b_core))]
+          => [(- nx 2) (- ny 2) (- nx 2) (- ny 2)])
+    (fact "p0" :step10
+          [p0 (first p)] => [(:p0 res) (:p0 res)])
+    (fact "b" :step10
+          b => b_core)
+    (fact "dimensions p_nt: nx, ny" :step10
+          [(count p_nt) (count (first p_nt))
+           (count p_nt_py) (count (first p_nt_py))]
+          => [nx ny nx ny])
+    (fact "p_nt" :step10
+          (format-zz p_nt 5) => (format-zz p_nt_py 5))
+    ))
+
+
+(fact
+ "Step 10: 2D Poisson Equation" :step10
+ (test-poisson-eqn-2D 50 0. 2. 50 0. 1. 100))
+
+
+
 ;; restore settings
 ;;
 (set! *print-length* print-length)

@@ -332,3 +332,45 @@
       (if (< (L1-norm p pn) (:eps m))
         p
         (recur p (f-laplace dyy dxx upper_y upper_x p))))))
+
+
+;;; Step 10
+
+;; pd[2:nx,1:ny-1] ; E :except-rows first  :except-rows second :except-cols first :except-cols last
+;; pd[0:nx-2,1:ny-1] ; F :except-rows prev-last  :except-rows last :except-cols first :except-cols last
+;; pd[1:nx-1,2:ny] ; G :except-rows first  :except-rows last :except-cols first :except-cols second
+;; pd[1:nx-1,0:ny-2] ; H :except-rows first  :except-rows last :except-cols prev-last :except-cols last
+;;
+;; dxx = dx**2/(2*(dx**2+dy**2))
+;; dyy = dy**2/(2*(dx**2+dy**2))
+;;
+;; p[1:nx-1,1:ny-1] = ( dy**2/(2*(dx**2+dy**2))*(pd[2:nx,1:ny-1]+pd[0:nx-2,1:ny-1]) +
+;;                      dx**2/(2*(dx**2+dy**2))*(pd[1:nx-1,2:ny]+pd[1:nx-1,0:ny-2]) -
+;;                     b[1:nx-1,1:ny-1]*dx**2*dy**2/(2*(dx**2+dy**2)) )
+;;
+;; p[0,:] = p[nx-1,:] = p[:,0] = p[:,ny-1] = 0.0
+;;
+(defn poisson-eqn-2D [m pn]
+  (let [upper_x (dec (:nx m)) ; rows
+        upper_y (dec (:ny m)) ; cols
+        E (sel (sel pn :except-rows 0 :except-cols upper_y)
+               :except-rows 0 :except-cols 0)
+        F (sel (sel pn :except-rows upper_x :except-cols upper_y)
+               :except-rows (dec upper_x) :except-cols 0)
+        G (sel (sel pn :except-rows upper_x :except-cols 0)
+               :except-rows 0 :except-cols 0)
+        H (sel (sel pn :except-rows upper_x :except-cols upper_y)
+               :except-rows 0 :except-cols (dec upper_y))
+        dx2 (math/expt (:dx m) 2.)
+        dy2 (math/expt (:dy m) 2.)
+        edxdy (* 2. (+ dx2 dy2))
+        dxx (/ dx2 edxdy)
+        dyy (/ dy2 edxdy)
+        p_core (plus (mult dyy (plus E F))
+                     (mult dxx (plus G H))
+                     (mult (* -1. dx2 dyy) (:b m)))
+        p (matrix 0. (:ny m) (:nx m))]
+    (doseq [x (range 1 upper_x)
+            y (range 1 upper_y)]
+      (clx/set p x y (sel p_core (dec x) (dec y))))
+    p))
