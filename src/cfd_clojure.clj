@@ -275,7 +275,7 @@
 ;;  l1norm = (np.sum(np.abs(p[:])-np.abs(pn[:])))/np.sum(np.abs(pn[:]))
 ;;
 (defn L1-norm [x y]
-  (/ (sum (minus (abs x) (abs y))) (sum (abs y))))
+  (/ (reduce + (map sum (minus (abs x) (abs y)))) (reduce + (map sum (abs y)))))
 
 
 ;; p[2:,1:-1] ; E :except-rows first  :except-rows second :except-cols first :except-cols last
@@ -300,12 +300,12 @@
 ;; p[-1,:] = p[-2,:]	##dp/dy = 0 @ y = 1
 ;;
 (defn- f-laplace [dyy dxx upper_y upper_x pn]
-  (let [E (sel (sel pn :excepnt-rows 0 :excepnt-cols upper_x)
-               :excepnt-rows 0 :excepnt-cols 0)
-        F (sel (sel pn :excepnt-rows upper_y :excepnt-cols upper_x)
-               :excepnt-rows (dec upper_y) :excepnt-cols 0)
-        G (sel (sel pn :excepnt-rows upper_y :excepnt-cols 0)
-               :excepnt-rows 0 :excepnt-cols 0)
+  (let [E (sel (sel pn :except-rows 0 :except-cols upper_x)
+               :except-rows 0 :except-cols 0)
+        F (sel (sel pn :except-rows upper_y :except-cols upper_x)
+               :except-rows (dec upper_y) :except-cols 0)
+        G (sel (sel pn :except-rows upper_y :except-cols 0)
+               :except-rows 0 :except-cols 0)
         H (sel (sel pn :except-rows upper_y :except-cols upper_x)
                :except-rows 0 :except-cols (dec upper_x))
         p_core (plus (mult dyy (plus E F))

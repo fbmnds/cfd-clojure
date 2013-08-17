@@ -788,17 +788,21 @@
         p0 (set-p0 ny nx (/ dy 2.))
         res (json/read-json
              (slurp (str/join
-                     ["./test/cfd_clojure/python/test-09-" nx ".json"])))]
+                     ["./test/cfd_clojure/python/test-09-" nx ".json"])))
+        p (laplace-eqn-2D m p0)]
     (fact "params " :step9
           [nx dx ny dy eps]
           => [(:nx res) (:dx res)
               (:ny res) (:dy res)
               (:eps res)])
-    (fact "dimensions p0" :step9
-          [(count p0) (count (first p0))]
-          => [ny nx])
+    (fact "dimensions p0, p" :step9
+          [(count p0) (count (first p0))
+           (count p) (count (first p))]
+          => [ny nx ny nx])
     (fact "p0" :step9
-          (format-zz p0 10) => (format-zz (:p0 res) 10))))
+          (format-zz p0 10) => (format-zz (:p0 res) 10))
+    (fact "p" :step9
+          (format-zz p 9) => (format-zz (:p res) 9))))
 
 (fact
  "Step 9: 2D Laplace Equation" :step9
