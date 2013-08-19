@@ -307,10 +307,12 @@
                :except-rows 0 :except-cols (dec upper_x))
         p_core (plus (mult dyy (plus E F))
                      (mult dxx (plus G H)))
-        p (matrix pn)]
+        p (matrix 0. (inc upper_y) (inc upper_x))]
     (doseq [y (range 1 upper_y)
             x (range 1 upper_x)]
       (clx/set p y x (sel p_core (dec y) (dec x))))
+    (doseq [y (range (inc upper_y))]
+      (clx/set p y upper_x (sel pn y upper_x)))
     (doseq [x (range (inc upper_x))]
       (clx/set p 0 x (sel p 1 x))
       (clx/set p upper_y x (sel p (dec upper_y) x)))
@@ -394,7 +396,7 @@
 ;; b[1:-1,1:-1]=1/dt*( (Eu-Fu)/(2*dx) + (Gv-Hv)/(2*dy) )-( (Eu-Fu)/(2*dx) )**2-\
 ;;                 2*( (Gu-Hu)/(2*dy) * (Ev-Fv)/(2*dx) )-( (Gv-Hv)/(2*dy) )**2
 
-(defn buildup-b [m [un vn]]  ; treat rho as external factor
+(defn buildup-b [m [un vn]]   ; treat rho as external factor
   (let [upper_x (dec (:nx m)) ; rows
         upper_y (dec (:ny m)) ; cols
         Eu (sel (sel un :except-rows 0 :except-cols upper_y)
@@ -416,17 +418,50 @@
         Eu-Fu (minus Eu Fu)
         Gu-Hu (minus Gu Hu)
         Ev-Fv (minus Ev Fv)
-        Gv-Hv (minus Gv Hv)
-        b_core (plus (mult (/  1. (* 2. (:dt m) (:dx m))) Eu-Fu)
-                     (mult (/ -1. (* 2. (:dt m) (:dy m))) Gv-Hv)
-                     (mult (/ -1. (math/expt (* 2. (:dx m)) 2.)) Eu-Fu Eu-Fu)
-                     (mult (/  1. (* 2. (:dx m) (:dy m))) Gu-Hu Ev-Fv)
-                     (mult (/ -1. (math/expt (* 2. (:dy m)) 2.)) Gv-Hv Gv-Hv))
-        b (matrix 0. (:nx m) (:ny m))]
-    (doseq [x (range 1 upper_x)
-            y (range 1 upper_y)]
-      (clx/set b x y (sel b_core (dec x) (dec y))))
-    b))
+        Gv-Hv (minus Gv Hv)]
+    (plus (mult (/  1. (* 2. (:dt m) (:dx m))) Eu-Fu)
+          (mult (/ -1. (* 2. (:dt m) (:dy m))) Gv-Hv)
+          (mult (/ -1. (math/expt (* 2. (:dx m)) 2.)) Eu-Fu Eu-Fu)
+          (mult (/  1. (* 2. (:dx m) (:dy m))) Gu-Hu Ev-Fv)
+          (mult (/ -1. (math/expt (* 2. (:dy m)) 2.)) Gv-Hv Gv-Hv))))
 
-(defn cavity-flow-2D [m [u v p]]
-  [u v p])
+
+;; pn[2:,1:-1]   ; Ep :except-rows  first     second  :except-cols  first     last
+;; pn[0:-2,1:-1] ; Fp :except-rows  prev-last last    :except-cols  first     last
+;; pn[1:-1,2:]   ; Gp :except-rows  first     last    :except-cols  first     second
+;; pn[1:-1,0:-2] ; Hp :except-rows  first     last    :except-cols  prev-last last
+;;
+;; p[1:-1,1:-1] = ((Ep+Fp)*dy**2+(Gp+Hp)*dx**2)/(2*(dx**2+dy**2)) -\
+;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
+;;
+;; p[1:-1,1:-1] = ((pn[2:,1:-1]+pn[0:-2,1:-1])*dy**2+(pn[1:-1,2:]+pn[1:-1,0:-2])*dx**2)/\
+;;         (2*(dx**2+dy**2)) -\
+;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
+;;
+;; p[-1,:] =p[-2,:]		##dp/dy = 0 at y = 2
+;; p[0,:] = p[1,:]         ##dp/dy = 0 at y = 0
+;; p[:,0]=p[:,1]              ##dp/dx = 0 at x = 0
+;; p[:,-1]=0                      ##p = 0 at x = 2
+
+
+
+(defn pressure-poisson [m bn pn]
+  (let [upper_x (dec (:nx m)) ; rows
+        upper_y (dec (:ny m)) ; cols
+        Ep (sel (sel pn :except-rows 0 :except-cols upper_y)
+                :except-rows 0 :except-cols 0)
+        Fp (sel (sel pn :except-rows upper_x :except-cols upper_y)
+                :except-rows (dec upper_x) :except-cols 0)
+        Gp (sel (sel pn :except-rows upper_x :except-cols 0)
+                :except-rows 0 :except-cols 0)
+        Hp (sel (sel pn :except-rows upper_x :except-cols upper_y)
+                :except-rows 0 :except-cols (dec upper_y))
+        p (matrix pn)]
+    (doseq [x (range (inc upper_x))]
+      (clx/set p 0 x (sel p 1 x))
+      (clx/set p upper_y x (sel p (dec upper_y) x)))
+    p))
+
+
+(defn cavity-flow-2D [m [un vn pn]]
+  [un vn pn])

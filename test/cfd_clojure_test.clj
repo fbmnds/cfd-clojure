@@ -889,13 +889,17 @@
         v0 (matrix 0. nx ny)
         b0 (buildup-b m [u0 v0])
         p0 (matrix 0. nx ny)
+        b0_py (sel (sel (:b0 res) :except-rows upper_x :except-cols upper_y)
+                   :except-rows 0   :except-cols 0)
         [u v p] (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
         u_nt (last v)
         u_nt_py (:u_nt res)
         v_nt (last v)
         v_nt_py (:v_nt res)
         p_nt (last p)
-        p_nt_py (:p_nt res)]
+        p_nt_py (:p_nt res)
+        b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
+                     :except-rows 0   :except-cols 0)]
     (fact "params " :step11
           [nx dx ny dy nt dt nit rho nu]
           => [(:nx res) (:dx res)
@@ -903,20 +907,20 @@
               (:nt res) (:dt res)
               (:nit res)
               (:rho res) (:nu res)])
-     (fact "dimensions b0: nx, ny" :step11
-           [(count b0) (count (first b0))
-            (count (:b0 res)) (count (first (:b0 res)))]
-           => [nx ny nx ny])
-     (fact "p0" :step11
-           [p0 (first p)] => [(:p0 res) (:p0 res)])
-     (fact "b0" :step11
-           b0 => (:b0 res))
-     (fact "dimensions p_nt: nx, ny" :step11
-           [nt (count p_nt) (count (first p_nt))
-            (count p_nt_py) (count (first p_nt_py))]
-           => [(:nt res) nx ny nx ny])
-;; (fact "p_nt" :step11
-;;          (format-zz p_nt 5) => (format-zz p_nt_py 5)
+    (fact "dimensions b: nx-2, ny-2" :step10
+          [(count b0) (count (first b0))
+           (count b0_py) (count (first b0_py))]
+          => [(- nx 2) (- ny 2) (- nx 2) (- ny 2)])
+    (fact "b0" :step11
+          b0 => b0_py)
+    (fact "p0" :step11
+          [p0 (first p)] => [(:p0 res) (:p0 res)])
+    (fact "dimensions p_nt: nx, ny" :step11
+          [nt (count p_nt) (count (first p_nt))
+           (count p_nt_py) (count (first p_nt_py))]
+          => [(:nt res) nx ny nx ny])
+    ;; (fact "p_nt" :step11
+    ;;          (format-zz p_nt 5) => (format-zz p_nt_py 5)
     ))
 
 
