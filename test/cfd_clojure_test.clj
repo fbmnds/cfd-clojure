@@ -907,15 +907,14 @@
            [(count b0) (count (first b0))
             (count (:b0 res)) (count (first (:b0 res)))]
            => [nx ny nx ny])
-;;
-;;     (fact "p0" :step11
-;;           [p0 (first p)] => [(:p0 res) (:p0 res)])
+     (fact "p0" :step11
+           [p0 (first p)] => [(:p0 res) (:p0 res)])
      (fact "b0" :step11
            b0 => (:b0 res))
-;;     (fact "dimensions p_nt: nx, ny" :step11
-;;           [(count p_nt) (count (first p_nt))
-;;            (count p_nt_py) (count (first p_nt_py))]
-;;           => [nx ny nx ny])
+     (fact "dimensions p_nt: nx, ny" :step11
+           [nt (count p_nt) (count (first p_nt))
+            (count p_nt_py) (count (first p_nt_py))]
+           => [(:nt res) nx ny nx ny])
 ;; (fact "p_nt" :step11
 ;;          (format-zz p_nt 5) => (format-zz p_nt_py 5)
     ))
