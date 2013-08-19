@@ -110,7 +110,7 @@ x = np.linspace(0,2,nx)
 y = np.linspace(0,2,ny)
 Y,X = np.meshgrid(y,x)
 
-rho = 1
+rho = 1.
 nu = .1
 dt = .001
 
@@ -244,8 +244,8 @@ fig.show()
 
 ###  reinitialization
 
-nx = 10
-ny = 10
+nx = 21
+ny = 21
 
 dx = 2.0/(nx-1)
 dy = 2.0/(ny-1)
