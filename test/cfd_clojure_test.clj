@@ -867,6 +867,67 @@
  (test-poisson-eqn-2D 50 0. 2. 50 0. 1. 100))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;
+;;;; Step 11: Cavity Flow with Navier-Stokes
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn test-cavitiy-flow-2D [nx ny nt dt nit rho nu]
+  (let [upper_x (dec nx) ; rows
+        upper_y (dec ny) ; cols
+        dx (/ 2. (dec nx))
+        dy (/ 2. (dec ny))
+        res (json/read-json
+             (slurp (str/join
+                     ["./test/cfd_clojure/python/test-11-" nt ".json"])))
+        m {:nx nx :dx dx
+           :ny ny :dy dy
+           :nt nt :dt dt
+           :nit nit :rho rho :nu nu}
+        u0 (matrix 0. nx ny)
+        v0 (matrix 0. nx ny)
+        b0 (buildup-b m [u0 v0])
+        p0 (matrix 0. nx ny)
+        [u v p] (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+        u_nt (last v)
+        u_nt_py (:u_nt res)
+        v_nt (last v)
+        v_nt_py (:v_nt res)
+        p_nt (last p)
+        p_nt_py (:p_nt res)]
+    (fact "params " :step11
+          [nx dx ny dy nt dt nit rho nu]
+          => [(:nx res) (:dx res)
+              (:ny res) (:dy res)
+              (:nt res) (:dt res)
+              (:nit res)
+              (:rho res) (:nu res)])
+     (fact "dimensions b0: nx, ny" :step11
+           [(count b0) (count (first b0))
+            (count (:b0 res)) (count (first (:b0 res)))]
+           => [nx ny nx ny])
+;;
+;;     (fact "p0" :step11
+;;           [p0 (first p)] => [(:p0 res) (:p0 res)])
+     (fact "b0" :step11
+           b0 => (:b0 res))
+;;     (fact "dimensions p_nt: nx, ny" :step11
+;;           [(count p_nt) (count (first p_nt))
+;;            (count p_nt_py) (count (first p_nt_py))]
+;;           => [nx ny nx ny])
+;; (fact "p_nt" :step11
+;;          (format-zz p_nt 5) => (format-zz p_nt_py 5)
+    ))
+
+
+(fact
+ "Step 11: Cavity Flow with Navier-Stokes" :step11
+ (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
+ (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
+ (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1))
+
+
 
 ;; restore settings
 ;;

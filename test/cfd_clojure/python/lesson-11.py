@@ -221,10 +221,10 @@ print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 u, v, p, b = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-print_u (f,''.join([",\n \"p_", str(nt),"\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"b_", str(nt),"\" : ["]), b, nx, ny, "]")
-print_u (f,''.join([",\n \"u_", str(nt),"\" : ["]), u, nx, ny, "]")
-print_u (f,''.join([",\n \"v_", str(nt),"\" : ["]), v, nx, ny, "] }\n")
+print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
+print_u (f,''.join([",\n \"b_nt\" : ["]), b, nx, ny, "]")
+print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
+print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
 
 f.close()
 
@@ -292,10 +292,10 @@ print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 u, v, p, b = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-print_u (f,''.join([",\n \"p_", str(nt),"\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"b_", str(nt),"\" : ["]), b, nx, ny, "]")
-print_u (f,''.join([",\n \"u_", str(nt),"\" : ["]), u, nx, ny, "]")
-print_u (f,''.join([",\n \"v_", str(nt),"\" : ["]), v, nx, ny, "] }\n")
+print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
+print_u (f,''.join([",\n \"b_nt\" : ["]), b, nx, ny, "]")
+print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
+print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
 
 f.close()
 
