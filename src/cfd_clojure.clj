@@ -438,11 +438,10 @@
 ;;         (2*(dx**2+dy**2)) -\
 ;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
 ;;
-;; p[-1,:] =p[-2,:]        ##dp/dy = 0 at y = 2
+;; p[-1,:] =p[-2,:]		##dp/dy = 0 at y = 2
 ;; p[0,:] = p[1,:]         ##dp/dy = 0 at y = 0
-;; p[:,0]=p[:,1]           ##dp/dx = 0 at x = 0
-;; p[:,-1]=0               ##p = 0 at x = 2      ;; redundant
-
+;; p[:,0]=p[:,1]              ##dp/dx = 0 at x = 0
+;; p[:,-1]=0                      ##p = 0 at x = 2
 
 
 (defn pressure-poisson [m bn pn]
@@ -472,7 +471,8 @@
       (clx/set p 0 y (sel p 1 y))
       (clx/set p upper_x y (sel p (dec upper_x) y)))
     (doseq [x (range (inc upper_x))]
-      (clx/set p x 0 (sel p x 1)))
+      (clx/set p x 0 (sel p x 1))
+      (clx/set p x upper_y 0.))
     p))
 
 

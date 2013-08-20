@@ -51,16 +51,18 @@ def print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit):
 
 
 def results(f,nx,dx,ny,dy,dt,u,v,p,b0):
+    print_u (f,",\n \"u_nt\" : [", u, nx, ny, "]")
+    print_u (f,",\n \"v_nt\" : [", v, nx, ny, "]")
+
     print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
     b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
-    print_u (f,",\n \"b_nt\" : [", b_nt, nx, ny, "]")
 
+    print_u (f,",\n \"b_nt\" : [", b_nt, nx, ny, "]")
+    print_u (f,",\n \"p_nt\" : [", p, nx, ny, "]")
     p_py = presPoisson(p, dx, dy, b_nt)
     print_u (f,",\n \"p_py\" : [", p_py, nx, ny, "]")
 
-    print_u (f,",\n \"p_nt\" : [", p, nx, ny, "]")
-    print_u (f,",\n \"u_nt\" : [", u, nx, ny, "]")
-    print_u (f,",\n \"v_nt\" : [", v, nx, ny, "] }\n")
+    f.write( "}" )
 
 ###
 

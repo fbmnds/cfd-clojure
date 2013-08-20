@@ -904,7 +904,10 @@
         b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
                      :except-rows 0   :except-cols 0)
 
-        p_py (pressure-poisson m b_nt_py (:p_nt res))]
+        p_py (last (take
+                    (inc (:nit m))
+                    (iterate (partial pressure-poisson m b_nt_py) p_nt_py)))]
+
     (fact "params " :step11
           [nx dx ny dy nt dt nit rho nu]
           => [(:nx res) (:dx res)
@@ -912,6 +915,7 @@
               (:nt res) (:dt res)
               (:nit res)
               (:rho res) (:nu res)])
+
     (fact "dimensions b_nt: nx-2, ny-2" :step11
           [(count b_nt) (count (first b_nt))
            (count b_nt_py) (count (first b_nt_py))]
@@ -923,7 +927,8 @@
           [nt (count p_py) (count (first p_py))
            (count (:p_py res)) (count (first (:p_py res)))]
           => [(:nt res) nx ny nx ny])
-
+    (fact "p py/clj" :step11
+          (format-zz p_py 2) => (format-zz (:p_py res) 2))
 
 
 ;;     (fact "u0, v0, p0" :step11
