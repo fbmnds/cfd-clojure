@@ -902,7 +902,9 @@
 
         b_nt (buildup-b m [u_nt_py v_nt_py])
         b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
-                     :except-rows 0   :except-cols 0)]
+                     :except-rows 0   :except-cols 0)
+
+        p_py (pressure-poisson m b_nt_py (:p_nt res))]
     (fact "params " :step11
           [nx dx ny dy nt dt nit rho nu]
           => [(:nx res) (:dx res)
@@ -917,13 +919,16 @@
     (fact "b_nt" :step11
           (format-zz b_nt 5) => (format-zz b_nt_py 5))
 
+    (fact "dimensions p_py: nx, ny" :step11
+          [nt (count p_py) (count (first p_py))
+           (count (:p_py res)) (count (first (:p_py res)))]
+          => [(:nt res) nx ny nx ny])
+
+
+
 ;;     (fact "u0, v0, p0" :step11
 ;;           [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
 
-;;     (fact "dimensions p_nt: nx, ny" :step11
-;;           [nt (count p_nt) (count (first p_nt))
-;;            (count p_nt_py) (count (first p_nt_py))]
-;;           => [(:nt res) nx ny nx ny])
 
     ))
 
