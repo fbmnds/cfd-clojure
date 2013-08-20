@@ -22,7 +22,10 @@
 
                  [clatrix "0.3.0"]
 
+                 [mikera/matrix-api "0.0.4"]
+
                  [org.clojure/data.json "0.2.2"]]
 
   :profiles {:dev {:dependencies [[midje "1.5.1"]]}}
+  :jvm-opts ["-Xmx2048M"]
   :repl-options {:port 4555})

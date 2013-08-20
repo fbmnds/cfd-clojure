@@ -1,8 +1,13 @@
 (ns cfd-clojure
   (:require [clojure.math.numeric-tower :as math]
             [clojure.core.match :as m]
-            [clatrix.core :as clx])
+            [clatrix.core :as clx]
+            [clojure.core.matrix :as M])
   (:use (incanter core charts)))
+
+
+(set! *warn-on-reflection* true)
+
 
 ;; provide discretisation linear in t and up to second order in x
 
@@ -447,22 +452,18 @@
 (defn pressure-poisson [m bn pn]
   (let [upper_x (dec (:nx m)) ; rows
         upper_y (dec (:ny m)) ; cols
-        E (sel (sel pn :except-rows 0 :except-cols upper_y)
-                :except-rows 0 :except-cols 0)
-        F (sel (sel pn :except-rows upper_x :except-cols upper_y)
-                :except-rows (dec upper_x) :except-cols 0)
-        G (sel (sel pn :except-rows upper_x :except-cols 0)
-                :except-rows 0 :except-cols 0)
-        H (sel (sel pn :except-rows upper_x :except-cols upper_y)
-               :except-rows 0 :except-cols (dec upper_y))
+        E (M/submatrix pn [[2 (dec upper_x)] [1 (dec upper_y)]])
+        F (M/submatrix pn [[0 (dec upper_x)] [1 (dec upper_y)]])
+        G (M/submatrix pn [[1 (dec upper_x)] [2 (dec upper_y)]])
+        H (M/submatrix pn [[1 (dec upper_x)] [0 (dec upper_y)]])
         dx2 (math/expt (:dx m) 2.)
         dy2 (math/expt (:dy m) 2.)
         edxdy (* 2. (+ dx2 dy2))
         dxx (/ dx2 edxdy)
         dyy (/ dy2 edxdy)
-        p_core (plus (mult dyy (plus E F))
-                     (mult dxx (plus G H))
-                     (mult (* -1. dx2 dyy) bn))
+        p_core (plus (M/mul dyy (M/add E F))
+                     (M/mul dxx (M/add G H))
+                     (M/mul (* -1. dx2 dyy) bn))
         p (matrix 0. (inc upper_x) (inc upper_y))]
     (doseq [x (range 1 upper_x)
             y (range 1 upper_y)]
@@ -518,7 +519,15 @@
   (let [upper_x (dec (:nx m))
         upper_y (dec (:ny m))
         b (mult (:rho m) (buildup-b m [un vn]))
-        p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
+        ;;_ (println "before p, nt = " (:nt m))
+        ;; p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
+        p ((apply comp (repeat (inc (:nit m)) (partial pressure-poisson m b))) pn)
+        ;; p (loop [n (:nit m)
+        ;;          p pn]
+        ;;     (if (< n 0)
+        ;;       p
+        ;;       (recur (dec n) ((partial pressure-poisson m b) p))))
+        ;;_ (println "after p")
         Du (sel (sel un :except-rows upper_x :except-cols upper_y)
                :except-rows 0   :except-cols 0)
         Eu (sel (sel un :except-rows 0 :except-cols upper_y)

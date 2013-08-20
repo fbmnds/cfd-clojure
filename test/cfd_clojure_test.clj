@@ -12,6 +12,8 @@
 (use '[clojure.java.shell :only [sh]])
 
 
+(set! *warn-on-reflection* true)
+
 ;; save settings
 ;;
 (def print-length *print-length*)
@@ -890,6 +892,7 @@
         p0 (matrix 0. nx ny)
 
 ;;         w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+;;
 ;;         u (map first w)
 ;;         v (map second w)
 ;;         p (map last w)
@@ -928,14 +931,22 @@
            (count (:p_py res)) (count (first (:p_py res)))]
           => [(:nt res) nx ny nx ny])
     (fact "p py/clj" :step11
-          (format-zz p_py 2) => (format-zz (:p_py res) 2))
+          (format-zz p_py 5) => (format-zz (:p_py res) 5))
 
 
-;;     (fact "u0, v0, p0" :step11
-;;           [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
+;;      (fact "u0, v0, p0" :step11
+;;            [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
 
+;;      (fact "u" :step11
+;;            u_nt => u_nt_py)
+;;
+;;      (fact "v" :step11
+;;            v_nt => v_nt_py)
+;;
+;;      (fact "p" :step11
+;;            p_nt => p_nt_py)
 
-    ))
+           ))
 
 
 (fact
@@ -949,6 +960,7 @@
 
 ;; restore settings
 ;;
+
 (set! *print-length* print-length)
 ;;
 (if-not (= locale en_US)
