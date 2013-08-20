@@ -887,17 +887,20 @@
            :nit nit :rho rho :nu nu}
         u0 (matrix 0. nx ny)
         v0 (matrix 0. nx ny)
-        b0 (buildup-b m [u0 v0])
         p0 (matrix 0. nx ny)
-        b0_py (sel (sel (:b0 res) :except-rows upper_x :except-cols upper_y)
-                   :except-rows 0   :except-cols 0)
-        [u v p] (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
-        u_nt (last v)
+
+;;         w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+;;         u (map first w)
+;;         v (map second w)
+;;         p (map last w)
+;;         u_nt (last u)
         u_nt_py (:u_nt res)
-        v_nt (last v)
+;;         v_nt (last v)
         v_nt_py (:v_nt res)
-        p_nt (last p)
+;;         p_nt (last p)
         p_nt_py (:p_nt res)
+
+        b_nt (buildup-b m [u_nt_py v_nt_py])
         b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
                      :except-rows 0   :except-cols 0)]
     (fact "params " :step11
@@ -907,20 +910,21 @@
               (:nt res) (:dt res)
               (:nit res)
               (:rho res) (:nu res)])
-    (fact "dimensions b: nx-2, ny-2" :step10
-          [(count b0) (count (first b0))
-           (count b0_py) (count (first b0_py))]
+    (fact "dimensions b_nt: nx-2, ny-2" :step11
+          [(count b_nt) (count (first b_nt))
+           (count b_nt_py) (count (first b_nt_py))]
           => [(- nx 2) (- ny 2) (- nx 2) (- ny 2)])
-    (fact "b0" :step11
-          b0 => b0_py)
-    (fact "p0" :step11
-          [p0 (first p)] => [(:p0 res) (:p0 res)])
-    (fact "dimensions p_nt: nx, ny" :step11
-          [nt (count p_nt) (count (first p_nt))
-           (count p_nt_py) (count (first p_nt_py))]
-          => [(:nt res) nx ny nx ny])
-    ;; (fact "p_nt" :step11
-    ;;          (format-zz p_nt 5) => (format-zz p_nt_py 5)
+    (fact "b_nt" :step11
+          (format-zz b_nt 5) => (format-zz b_nt_py 5))
+
+;;     (fact "u0, v0, p0" :step11
+;;           [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
+
+;;     (fact "dimensions p_nt: nx, ny" :step11
+;;           [nt (count p_nt) (count (first p_nt))
+;;            (count p_nt_py) (count (first p_nt_py))]
+;;           => [(:nt res) nx ny nx ny])
+
     ))
 
 
@@ -928,7 +932,8 @@
  "Step 11: Cavity Flow with Navier-Stokes" :step11
  (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
  (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
- (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1))
+ (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
+ )
 
 
 

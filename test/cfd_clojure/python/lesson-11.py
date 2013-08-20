@@ -123,6 +123,7 @@ u = np.zeros((ny, nx))
 v = np.zeros((ny, nx))
 p = np.zeros((ny, nx))
 b = np.zeros((ny, nx))
+b0 = np.zeros((ny, nx))
 nt = 200  ## variable test case parameter
 
 ### first test case
@@ -152,23 +153,25 @@ f.write(str(nu))
 f.write(", \"nit\" : ")
 f.write(str(nit))
 
+
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
-print_u (f, ",\n \"b0\" : [", b, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
 print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
+u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-u, v, p, b = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
+b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
+print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
 
 print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"b_nt\" : ["]), b, nx, ny, "]")
 print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
 print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
 
 f.close()
 
 fig = plt.figure(figsize=(11,7), dpi=100)
-plt.contourf(X,Y,p,alpha=0.5)    ###plnttong the pressure field as a contour
+plt.contourf(X,Y,p,alpha=0.5)    ###plotting the pressure field as a contour
 plt.colorbar()
 plt.contour(X,Y,p)               ###plotting the pressure field outlines
 plt.quiver(X[::2,::2],Y[::2,::2],u[::2,::2],v[::2,::2]) ##plotting velocity
@@ -214,15 +217,17 @@ f.write(", \"nit\" : ")
 f.write(str(nit))
 
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
-print_u (f, ",\n \"b0\" : [", b, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
 print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 
-u, v, p, b = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+
+print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
+b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
+print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
 
 print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"b_nt\" : ["]), b, nx, ny, "]")
 print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
 print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
 
@@ -285,15 +290,17 @@ f.write(", \"nit\" : ")
 f.write(str(nit))
 
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
-print_u (f, ",\n \"b0\" : [", b, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
 print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 
-u, v, p, b = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+
+print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
+b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
+print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
 
 print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"b_nt\" : ["]), b, nx, ny, "]")
 print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
 print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
 
