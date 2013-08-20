@@ -25,6 +25,43 @@ def print_v (f, label1, v, n, label2):
             f.write(", ")
     f.write(label2)
 
+def print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit):
+    f.write("{ \"nx\" : ")
+    f.write(str(nx))
+    f.write(", \"dx\" : ")
+    f.write(str(dx))
+
+    f.write(", \"ny\" : ")
+    f.write(str(ny))
+    f.write(", \"dy\" : ")
+    f.write(str(dy))
+
+    f.write(", \"nt\" : ")
+    f.write(str(nt))
+    f.write(", \"dt\" : ")
+    f.write(str(dt))
+
+    f.write(", \"rho\" : ")
+    f.write(str(rho))
+    f.write(", \"nu\" : ")
+    f.write(str(nu))
+
+    f.write(", \"nit\" : ")
+    f.write(str(nit))
+
+
+def results(f,nx,dx,ny,dy,dt,u,v,p,b0):
+    print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
+    b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
+    print_u (f,",\n \"b_nt\" : [", b_nt, nx, ny, "]")
+
+    p_py = presPoisson(p, dx, dy, b_nt)
+    print_u (f,",\n \"p_py\" : [", p_py, nx, ny, "]")
+
+    print_u (f,",\n \"p_nt\" : [", p, nx, ny, "]")
+    print_u (f,",\n \"u_nt\" : [", u, nx, ny, "]")
+    print_u (f,",\n \"v_nt\" : [", v, nx, ny, "] }\n")
+
 ###
 
 
@@ -126,33 +163,13 @@ b = np.zeros((ny, nx))
 b0 = np.zeros((ny, nx))
 nt = 200  ## variable test case parameter
 
+p_py = np.zeros((ny, nx)) ## for testing presPoisson()
+
 ### first test case
 
 f = open(''.join(['test-11-', str(nt), '.json']),'w')
 
-f.write("{ \"nx\" : ")
-f.write(str(nx))
-f.write(", \"dx\" : ")
-f.write(str(dx))
-
-f.write(", \"ny\" : ")
-f.write(str(ny))
-f.write(", \"dy\" : ")
-f.write(str(dy))
-
-f.write(", \"nt\" : ")
-f.write(str(nt))
-f.write(", \"dt\" : ")
-f.write(str(dt))
-
-f.write(", \"rho\" : ")
-f.write(str(rho))
-f.write(", \"nu\" : ")
-f.write(str(nu))
-
-f.write(", \"nit\" : ")
-f.write(str(nit))
-
+print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit)
 
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
@@ -160,13 +177,7 @@ print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
-b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
-print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
-
-print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
-print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
+results(f,nx,dx,ny,dy,dt,u,v,p,b0)
 
 f.close()
 
@@ -193,28 +204,7 @@ nt = 700  ## variable test case parameter
 
 f = open(''.join(['test-11-', str(nt), '.json']),'w')
 
-f.write("{ \"nx\" : ")
-f.write(str(nx))
-f.write(", \"dx\" : ")
-f.write(str(dx))
-
-f.write(", \"ny\" : ")
-f.write(str(ny))
-f.write(", \"dy\" : ")
-f.write(str(dy))
-
-f.write(", \"nt\" : ")
-f.write(str(nt))
-f.write(", \"dt\" : ")
-f.write(str(dt))
-
-f.write(", \"rho\" : ")
-f.write(str(rho))
-f.write(", \"nu\" : ")
-f.write(str(nu))
-
-f.write(", \"nit\" : ")
-f.write(str(nit))
+print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit)
 
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
@@ -223,13 +213,7 @@ print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
-b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
-print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
-
-print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
-print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
+results(f,nx,dx,ny,dy,dt,u,v,p,b0)
 
 f.close()
 
@@ -266,28 +250,7 @@ nt = 3  ## variable test case parameter
 
 f = open(''.join(['test-11-', str(nt), '.json']),'w')
 
-f.write("{ \"nx\" : ")
-f.write(str(nx))
-f.write(", \"dx\" : ")
-f.write(str(dx))
-
-f.write(", \"ny\" : ")
-f.write(str(ny))
-f.write(", \"dy\" : ")
-f.write(str(dy))
-
-f.write(", \"nt\" : ")
-f.write(str(nt))
-f.write(", \"dt\" : ")
-f.write(str(dt))
-
-f.write(", \"rho\" : ")
-f.write(str(rho))
-f.write(", \"nu\" : ")
-f.write(str(nu))
-
-f.write(", \"nit\" : ")
-f.write(str(nit))
+print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit)
 
 print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
@@ -296,13 +259,7 @@ print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
 
 u, v, p, b0 = cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
 
-print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
-b_nt = buildUpB(b0, rho, dt, u, v, dx, dy)
-print_u (f,''.join([",\n \"b_nt\" : ["]), b_nt, nx, ny, "]")
-
-print_u (f,''.join([",\n \"p_nt\" : ["]), p, nx, ny, "]")
-print_u (f,''.join([",\n \"u_nt\" : ["]), u, nx, ny, "]")
-print_u (f,''.join([",\n \"v_nt\" : ["]), v, nx, ny, "] }\n")
+results(f,nx,dx,ny,dy,dt,u,v,p,b0)
 
 f.close()
 
