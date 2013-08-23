@@ -465,17 +465,17 @@
 (defn pressure-poisson [m bn pn]
   (let [upper_x (dec (:nx m)) ; rows
         upper_y (dec (:ny m)) ; cols
-        E (M/submatrix pn [[2 (dec upper_x)] [1 (dec upper_y)]])
-        F (M/submatrix pn [[0 (dec upper_x)] [1 (dec upper_y)]])
-        G (M/submatrix pn [[1 (dec upper_x)] [2 (dec upper_y)]])
-        H (M/submatrix pn [[1 (dec upper_x)] [0 (dec upper_y)]])
+        F (M/submatrix pn [[2 (dec upper_x)] [1 (dec upper_y)]])
+        G (M/submatrix pn [[0 (dec upper_x)] [1 (dec upper_y)]])
+        H (M/submatrix pn [[1 (dec upper_x)] [2 (dec upper_y)]])
+        J (M/submatrix pn [[1 (dec upper_x)] [0 (dec upper_y)]])
         dx2 (math/expt (:dx m) 2.)
         dy2 (math/expt (:dy m) 2.)
         edxdy (* 2. (+ dx2 dy2))
         dxx (/ dx2 edxdy)
         dyy (/ dy2 edxdy)
-        p_core (plus (M/mul dyy (M/add E F))
-                     (M/mul dxx (M/add G H))
+        p_core (plus (M/mul dyy (M/add F G))
+                     (M/mul dxx (M/add H J))
                      (M/mul (* -1. dx2 dyy) bn))
         p (matrix 0. (inc upper_x) (inc upper_y))]
     (doseq [x (range 1 upper_x)
@@ -490,25 +490,27 @@
     p))
 
 
-;; z[1:-1,1:-1] ; Dz :except-rows  first     last    :except-cols  first     last
-;; z[2:,1:-1]   ; Ez :except-rows  first     second  :except-cols  first     last
-;; z[0:-2,1:-1] ; Fz :except-rows  prev-last last    :except-cols  first     last
-;; z[1:-1,2:]   ; Gz :except-rows  first     last    :except-cols  first     second
-;; z[1:-1,0:-2] ; Hz :except-rows  first     last    :except-cols  prev-last last
+;; z[1:-1,1:-1] ; Ez :except-rows  first     last    :except-cols  first     last
+;; z[2:,1:-1]   ; Fz :except-rows  first     second  :except-cols  first     last
+;; z[0:-2,1:-1] ; Gz :except-rows  prev-last last    :except-cols  first     last
+;; z[1:-1,2:]   ; Hz :except-rows  first     last    :except-cols  first     second
+;; z[1:-1,0:-2] ; Jz :except-rows  first     last    :except-cols  prev-last last
 ;;
-;; u[1:-1,1:-1] = Du-\
-;;     Du*dt/dx*(Du-Fu)-\
-;;     Dv*dt/dy*(Du-Hu)-\
-;;     dt/(2*rho*dx)*(Ep-Fp)+\
-;;     nu*(dt/dx**2*(Eu-2*Du+Fu)+\
-;;     dt/dy**2*(Gu-2*Du+Hu))
+;; u[1:-1,1:-1] = Eu-\
+;;     Eu*dt/dx*(Eu-Gu)-\
+;;     Ev*dt/dy*(Eu-Ju)-\
+;;     dt/(2*rho*dx)*(Fp-Gp)+\
+;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
+;;     dt/dy**2*(Hu-2*Eu+Ju))
 ;;
-;; v[1:-1,1:-1] = Dv-\
-;;     Du*dt/dx*(Dv-Fv)-\
-;;     Dv*dt/dy*(Dv-Hv)-\
-;;     dt/(2*rho*dy)*(Gp-Hp)+\
-;;     nu*(dt/dx**2*(Ev-2*Dv+Fv)+\
-;;     (dt/dy**2*(Gv-2*Dv+Hv)))
+;; v[1:-1,1:-1] = Ev-\
+;;     Eu*dt/dx*(Ev-Gv)-\
+;;     Ev*dt/dy*(Ev-Gv)-\
+;;     dt/(2*rho*dy)*(Fp-Gp)+\
+;;     nu*(dt/dx**2*(Fv-2*Ev+Gv)+\
+;;     (dt/dy**2*(Hv-2*Ev+Jv)))
+
+
 
 
 (defn cavity-flow-2D [m [un vn pn]]

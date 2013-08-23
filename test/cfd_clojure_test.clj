@@ -948,26 +948,26 @@
 
            ))
 
-;; z[1:-1,1:-1] ; Dz :except-rows  first     last    :except-cols  first     last
-;; z[2:,1:-1]   ; Ez :except-rows  first     second  :except-cols  first     last
-;; z[0:-2,1:-1] ; Fz :except-rows  prev-last last    :except-cols  first     last
-;; z[1:-1,2:]   ; Gz :except-rows  first     last    :except-cols  first     second
-;; z[1:-1,0:-2] ; Hz :except-rows  first     last    :except-cols  prev-last last
 
-
-;; u[1:-1,1:-1] = Du-\
-;;     Du*dt/dx*(Du-Fu)-\
-;;     Dv*dt/dy*(Du-Hu)-\
-;;     dt/(2*rho*dx)*(Ep-Fp)+\
-;;     nu*(dt/dx**2*(Eu-2*Du+Fu)+\
-;;     dt/dy**2*(Gu-2*Du+Hu))
+;; z[1:-1,1:-1] ; Ez :except-rows  first     last    :except-cols  first     last
+;; z[2:,1:-1]   ; Fz :except-rows  first     second  :except-cols  first     last
+;; z[0:-2,1:-1] ; Gz :except-rows  prev-last last    :except-cols  first     last
+;; z[1:-1,2:]   ; Hz :except-rows  first     last    :except-cols  first     second
+;; z[1:-1,0:-2] ; Jz :except-rows  first     last    :except-cols  prev-last last
 ;;
-;; v[1:-1,1:-1] = Dv-\
-;;     Du*dt/dx*(Dv-Fv)-\
-;;     Dv*dt/dy*(Dv-Hv)-\
-;;     dt/(2*rho*dy)*(Gp-Hp)+\
-;;     nu*(dt/dx**2*(Ev-2*Dv+Fv)+\
-;;     (dt/dy**2*(Gv-2*Dv+Hv)))
+;; u[1:-1,1:-1] = Eu-\
+;;     Eu*dt/dx*(Eu-Gu)-\
+;;     Ev*dt/dy*(Eu-Ju)-\
+;;     dt/(2*rho*dx)*(Fp-Gp)+\
+;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
+;;     dt/dy**2*(Hu-2*Eu+Ju))
+;;
+;; v[1:-1,1:-1] = Ev-\
+;;     Eu*dt/dx*(Ev-Gv)-\
+;;     Ev*dt/dy*(Ev-Gv)-\
+;;     dt/(2*rho*dy)*(Fp-Gp)+\
+;;     nu*(dt/dx**2*(Fv-2*Ev+Gv)+\
+;;     (dt/dy**2*(Hv-2*Ev+Jv)))
 
 
 (defn tweaked-cavity-flow-2D [m [un vn pn]]
@@ -983,69 +983,56 @@
         ;;       p
         ;;       (recur (dec n) ((partial pressure-poisson m b) p))))
         ;;_ (println "after p")
-        Du (sel (sel un :except-rows upper_x :except-cols upper_y)
-               :except-rows 0   :except-cols 0)
-        Eu (sel (sel un :except-rows 0 :except-cols upper_y)
-                :except-rows 0 :except-cols 0)
-        Fu (sel (sel un :except-rows upper_x :except-cols upper_y)
-                :except-rows (dec upper_x) :except-cols 0)
-        Gu (sel (sel un :except-rows upper_x :except-cols 0)
-                :except-rows 0 :except-cols 0)
-        Hu (sel (sel un :except-rows upper_x :except-cols upper_y)
-                :except-rows 0 :except-cols (dec upper_y))
-        Du-Fu (minus Du Fu)
-        Du-Hu (minus Du Hu)
-        Dv (sel (sel vn :except-rows upper_x :except-cols upper_y)
-               :except-rows 0   :except-cols 0)
-        Ev (sel (sel vn :except-rows 0 :except-cols upper_y)
-                :except-rows 0 :except-cols 0)
-        Fv (sel (sel vn :except-rows upper_x :except-cols upper_y)
-                :except-rows (dec upper_x) :except-cols 0)
-        Gv (sel (sel vn :except-rows upper_x :except-cols 0)
-                :except-rows 0 :except-cols 0)
-        Hv (sel (sel vn :except-rows upper_x :except-cols upper_y)
-                :except-rows 0 :except-cols (dec upper_y))
-        Dv-Fv (minus Dv Fv)
-        Dv-Hv (minus Dv Hv)
-        Ep (sel (sel p :except-rows 0 :except-cols upper_y)
-                :except-rows 0 :except-cols 0)
-        Fp (sel (sel p :except-rows upper_x :except-cols upper_y)
-                :except-rows (dec upper_x) :except-cols 0)
-        Gp (sel (sel p :except-rows upper_x :except-cols 0)
-                :except-rows 0 :except-cols 0)
-        Hp (sel (sel p :except-rows upper_x :except-cols upper_y)
-                :except-rows 0 :except-cols (dec upper_y))
+        Eu (E un upper_x upper_y)
+        Fu (F un upper_x upper_y)
+        Gu (G un upper_x upper_y)
+        Hu (H un upper_x upper_y)
+        Ju (J un upper_x upper_y)
+        Eu-Gu (minus Eu Gu)
+        Eu-Ju (minus Eu Ju)
+        Ev (E vn upper_x upper_y)
+        Fv (F vn upper_x upper_y)
+        Gv (G vn upper_x upper_y)
+        Hv (H vn upper_x upper_y)
+        Jv (J vn upper_x upper_y)
+        Ev-Gv (minus Ev Gv)
+        Ev-Jv (minus Ev Jv)
+        Fp (F p upper_x upper_y)
+        Gp (G p upper_x upper_y)
+        Hp (H p upper_x upper_y)
+        Jp (J p upper_x upper_y)
         dtx (* -1. (/ (:dt m) (:dx m)))
         dty (* -1. (/ (:dt m) (:dy m)))
         dtxrho (/ dtx (* 2. (:rho m)))
         dtyrho (/ dty (* 2. (:rho m)))
         dtx2nu (/ (* (:nu m) (:dx m)) (math/expt (:dx m) 2.))
         dty2nu (/ (* (:nu m) (:dy m)) (math/expt (:dy m) 2.))
-        u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Du)
-                     (mult dtx Du Du-Fu)
-                     (mult dty Dv Du-Hu)
-                     (mult dtxrho (minus Ep Fp))
-                     (mult dtx2nu Eu)
+        u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu)
+                     (mult dtx Eu Eu-Gu)
+                     (mult dty Ev Eu-Ju)
+                     (mult dtxrho (minus Fp Gp))
                      (mult dtx2nu Fu)
-                     (mult dty2nu Gu)
-                     (mult dty2nu Hu))
-        v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Dv)
-                     (mult dtx Du Dv-Fv)
-                     (mult dty Dv Dv-Hv)
-                     (mult dtyrho (minus Gp Hp))
-                     (mult dtx2nu Ev)
+                     (mult dtx2nu Gu)
+                     (mult dty2nu Hu)
+                     (mult dty2nu Ju))
+        v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev)
+                     (mult dtx Eu Ev-Gv)
+                     (mult dty Ev Ev-Jv)
+                     (mult dtyrho (minus Hp Jp))
                      (mult dtx2nu Fv)
-                     (mult dty2nu Gv)
-                     (mult dty2nu Hv))
+                     (mult dtx2nu Gv)
+                     (mult dty2nu Hv)
+                     (mult dty2nu Jv))
         uu (matrix 0. (:nx m) (:ny m))
         vv (matrix 0. (:nx m) (:ny m))]
     (doseq [x (range 1 upper_x)
             y (range 1 upper_y)]
       (clx/set uu x y (sel u_core (dec x) (dec y)))
       (clx/set vv x y (sel v_core (dec x) (dec y))))
-    (doseq [x (range upper_x)]
+    (doseq [x (range (:nx m))]
       (clx/set uu x upper_y 1.))
   [uu vv p]))
+
 
 (defn test-1-cavity-flow-2D [nx ny nt dt nit rho nu]
   (let [upper_x (dec nx) ; rows
@@ -1112,8 +1099,8 @@
     (fact "u0, v0, p0" :step11
           [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
 
-;;     (fact "u" :step11
-;;           (format-zz u_nt 5) => (format-zz u_nt_py 5))
+    (fact "u" :step11
+          (format-zz u_nt 5) => (format-zz u_nt_py 5))
 ;;
 ;;     (fact "v" :step11
 ;;           v_nt => v_nt_py)
@@ -1127,10 +1114,10 @@
 
 (fact
  "Step 11: Cavity Flow with Navier-Stokes" :step11
- (test-1-cavity-flow-2D 21 21   1 0.001 50 1. 0.1)
  (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
  (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
  (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
+ (test-1-cavity-flow-2D 21 21   1 0.001 50 1. 0.1)
  )
 
 
