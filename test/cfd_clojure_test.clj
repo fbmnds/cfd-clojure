@@ -891,16 +891,16 @@
         v0 (matrix 0. nx ny)
         p0 (matrix 0. nx ny)
 
-;;         w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
-;;
-;;         u (map first w)
-;;         v (map second w)
-;;         p (map last w)
-;;         u_nt (last u)
+        w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+
+        u (map first w)
+        v (map second w)
+        p (map last w)
+        u_nt (last u)
         u_nt_py (:u_nt res)
-;;         v_nt (last v)
+        v_nt (last v)
         v_nt_py (:v_nt res)
-;;         p_nt (last p)
+        p_nt (last p)
         p_nt_py (:p_nt res)
 
         b_nt (buildup-b m [u_nt_py v_nt_py])
@@ -934,26 +934,107 @@
           (format-zz p_py 5) => (format-zz (:p_py res) 5))
 
 
-;;      (fact "u0, v0, p0" :step11
-;;            [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
+    (fact "u0, v0, p0" :step11
+          [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
 
-;;      (fact "u" :step11
-;;            u_nt => u_nt_py)
-;;
-;;      (fact "v" :step11
-;;            v_nt => v_nt_py)
-;;
-;;      (fact "p" :step11
-;;            p_nt => p_nt_py)
+    (fact "u" :step11
+          u_nt => u_nt_py)
+
+    (fact "v" :step11
+          v_nt => v_nt_py)
+
+    (fact "p" :step11
+          p_nt => p_nt_py)
 
            ))
 
 
+(defn test-1-cavitiy-flow-2D [nx ny nt dt nit rho nu]
+  (let [upper_x (dec nx) ; rows
+        upper_y (dec ny) ; cols
+        dx (/ 2. (dec nx))
+        dy (/ 2. (dec ny))
+        res (json/read-json
+             (slurp (str/join
+                     ["./test/cfd_clojure/python/test-11-" nt ".json"])))
+        m {:nx nx :dx dx
+           :ny ny :dy dy
+           :nt nt :dt dt
+           :nit nit :rho rho :nu nu}
+        u0 (:u0 res)
+        v0 (:v0 res)
+        p0 (:p0 res)
+        b0 (buildup-b m [u0 v0])
+        b0_py (sel (sel (:b0 res) :except-rows upper_x :except-cols upper_y)
+                     :except-rows 0   :except-cols 0)
+
+        w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+
+        u (map first w)
+        v (map second w)
+        p (map last w)
+        u_nt (last u)
+        u_nt_py (:u_nt res)
+        v_nt (last v)
+        v_nt_py (:v_nt res)
+        p_nt (last p)
+        p_nt_py (:p_nt res)
+
+        b_nt (buildup-b m [u_nt_py v_nt_py])
+        b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
+                     :except-rows 0   :except-cols 0)
+
+        p_py (last (take
+                    (inc (:nit m))
+                    (iterate (partial pressure-poisson m b_nt_py) p_nt_py)))]
+
+    (fact "params " :step11
+          [nx dx ny dy nt dt nit rho nu]
+          => [(:nx res) (:dx res)
+              (:ny res) (:dy res)
+              (:nt res) (:dt res)
+              (:nit res)
+              (:rho res) (:nu res)])
+
+    (fact "dimensions b_nt: nx-2, ny-2" :step11
+          [(count b_nt) (count (first b_nt))
+           (count b_nt_py) (count (first b_nt_py))]
+          => [(- nx 2) (- ny 2) (- nx 2) (- ny 2)])
+    (fact "b0 b_nt" :step11
+          [(format-zz b0 7) (format-zz b0 7)] => [(format-zz b0_py 7) (format-zz b_nt_py 7)])
+
+    (fact "dimensions p_py: nx, ny" :step11
+          [nt (count p_py) (count (first p_py))
+           (count (:p_py res)) (count (first (:p_py res)))]
+          => [(:nt res) nx ny nx ny])
+    (fact "p py/clj" :step11
+          (format-zz p_py 5) => (format-zz (:p_py res) 5))
+
+
+    (fact "u0, v0, p0" :step11
+          [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
+
+;;     (fact "u" :step11
+;;           u_nt => u_nt_py)
+;;
+;;     (fact "v" :step11
+;;           v_nt => v_nt_py)
+;;
+;;     (fact "p" :step11
+;;           p_nt => p_nt_py)
+
+           ))
+
+
+
 (fact
  "Step 11: Cavity Flow with Navier-Stokes" :step11
- (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
- (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
- (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
+ (test-1-cavitiy-flow-2D 21 21   1 0.001 50 1. 0.1)
+
+;;  (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
+;;  (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
+;;  (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
+
  )
 
 
