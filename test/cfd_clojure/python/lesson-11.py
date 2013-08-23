@@ -66,18 +66,6 @@ def results(f,nx,dx,ny,dy,dt,u,v,p,b0):
 
 
 
-def results1(f,nx,dx,ny,dy,dt,u,v,p,b):
-    print_u (f,",\n \"u_nt\" : [", u, nx, ny, "]")
-    print_u (f,",\n \"v_nt\" : [", v, nx, ny, "]")
-    print_u (f,",\n \"b_nt\" : [", b, nx, ny, "]")
-    print_u (f,",\n \"p_nt\" : [", p, nx, ny, "]")
-    p_py = presPoisson(p, dx, dy, b)
-    print_u (f,",\n \"p_py\" : [", p_py, nx, ny, "]")
-
-    f.write( "}" )
-
-
-
 ###
 
 
@@ -288,14 +276,14 @@ plt.quiver(X[::2,::2],Y[::2,::2],u[::2,::2],v[::2,::2])
 plt.xlabel('X')
 plt.ylabel('Y')
 fig.show()
-input(" press ENTER to continue ")
+#input(" press ENTER to continue ")
 
 
 ### fourth test case
 
 
 
-def test_cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu, b):
+def test_cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu):
     un = np.empty_like(u)
     vn = np.empty_like(v)
     ## b = np.zeros((ny, nx))
@@ -330,7 +318,7 @@ def test_cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu, b):
     v[:,-1] = 0
     u[-1,:] = 0
 
-    return u, v, p, b
+    return u, v
 
 
 
@@ -346,12 +334,11 @@ x = np.linspace(0,2,nx)
 y = np.linspace(0,2,ny)
 Y,X = np.meshgrid(y,x)
 
-### take u,v,p,b from third test case
+### take u,v,p from third test case
 
 ## u = np.zeros((ny, nx))
 ## v = np.zeros((ny, nx))
 ## p = np.zeros((ny, nx))
-b = np.zeros((ny, nx))  ## and reuse b0 of 3rd test case
 
 nt = 1  ## variable test case parameter / pseudo in this case
 
@@ -359,13 +346,20 @@ f = open(''.join(['test-11-', str(nt), '.json']),'w')
 
 print_params(f,nx,dx,ny,dy,nt,dt,rho,nu,nit)
 
-print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
 print_u (f, ",\n \"u0\" : [", u, nx, ny, "]")
 print_u (f, ",\n \"v0\" : [", v, nx, ny, "]")
-print_u (f, ",\n \"b0\" : [", b0, nx, ny, "]")
+print_u (f, ",\n \"p0\" : [", p, nx, ny, "]")
 
-u, v, p, b = test_cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu, b0)
-results1(f,nx,dx,ny,dy,dt,u,v,p,b)
+### in: u0,v0,p0
+
+u, v = test_cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu)
+
+### out: u_nt,v_nt
+
+print_u (f,",\n \"u_nt\" : [", u, nx, ny, "]")
+print_u (f,",\n \"v_nt\" : [", v, nx, ny, "]")
+
+f.write( "}" )
 
 f.close()
 

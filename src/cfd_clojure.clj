@@ -444,12 +444,12 @@
           (mult (/ -1. (math/expt (* 2. (:dy m)) 2.)) Hv-Jv Hv-Jv))))
 
 
-;; pn[2:,1:-1]   ; Ep :except-rows  first     second  :except-cols  first     last
-;; pn[0:-2,1:-1] ; Fp :except-rows  prev-last last    :except-cols  first     last
-;; pn[1:-1,2:]   ; Gp :except-rows  first     last    :except-cols  first     second
-;; pn[1:-1,0:-2] ; Hp :except-rows  first     last    :except-cols  prev-last last
+;; pn[2:,1:-1]   ; Fp :except-rows  first     second  :except-cols  first     last
+;; pn[0:-2,1:-1] ; Gp :except-rows  prev-last last    :except-cols  first     last
+;; pn[1:-1,2:]   ; Hp :except-rows  first     last    :except-cols  first     second
+;; pn[1:-1,0:-2] ; Jp :except-rows  first     last    :except-cols  prev-last last
 ;;
-;; p[1:-1,1:-1] = ((Ep+Fp)*dy**2+(Gp+Hp)*dx**2)/(2*(dx**2+dy**2)) -\
+;; p[1:-1,1:-1] = ((Fp+Gp)*dy**2+(Hp+Jp)*dx**2)/(2*(dx**2+dy**2)) -\
 ;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
 ;;
 ;; p[1:-1,1:-1] = ((pn[2:,1:-1]+pn[0:-2,1:-1])*dy**2+(pn[1:-1,2:]+pn[1:-1,0:-2])*dx**2)/\
@@ -518,8 +518,8 @@
         upper_y (dec (:ny m))
         b (mult (:rho m) (buildup-b m [un vn]))
         ;;_ (println "before p, nt = " (:nt m))
-        ;; p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
-        p ((apply comp (repeat (inc (:nit m)) (partial pressure-poisson m b))) pn)
+        p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
+        ;; p ((apply comp (repeat (inc (:nit m)) (partial pressure-poisson m b))) pn)
         ;; p (loop [n (:nit m)
         ;;          p pn]
         ;;     (if (< n 0)
@@ -531,15 +531,11 @@
         Gu (G un upper_x upper_y)
         Hu (H un upper_x upper_y)
         Ju (J un upper_x upper_y)
-        Eu-Gu (minus Eu Gu)
-        Eu-Ju (minus Eu Ju)
         Ev (E vn upper_x upper_y)
         Fv (F vn upper_x upper_y)
         Gv (G vn upper_x upper_y)
         Hv (H vn upper_x upper_y)
         Jv (J vn upper_x upper_y)
-        Ev-Gv (minus Ev Gv)
-        Ev-Jv (minus Ev Jv)
         Fp (F p upper_x upper_y)
         Gp (G p upper_x upper_y)
         Hp (H p upper_x upper_y)
@@ -548,19 +544,19 @@
         dty (* -1. (/ (:dt m) (:dy m)))
         dtxrho (/ dtx (* 2. (:rho m)))
         dtyrho (/ dty (* 2. (:rho m)))
-        dtx2nu (/ (* (:nu m) (:dx m)) (math/expt (:dx m) 2.))
-        dty2nu (/ (* (:nu m) (:dy m)) (math/expt (:dy m) 2.))
+        dtx2nu (/ (* (:nu m) (:dt m)) (* (:dx m) (:dx m)))
+        dty2nu (/ (* (:nu m) (:dt m)) (* (:dy m) (:dy m)))
         u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu)
-                     (mult dtx Eu Eu-Gu)
-                     (mult dty Ev Eu-Ju)
+                     (mult dtx Eu (minus Eu Gu))
+                     (mult dty Ev (minus Eu Ju))
                      (mult dtxrho (minus Fp Gp))
                      (mult dtx2nu Fu)
                      (mult dtx2nu Gu)
                      (mult dty2nu Hu)
                      (mult dty2nu Ju))
         v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev)
-                     (mult dtx Eu Ev-Gv)
-                     (mult dty Ev Ev-Jv)
+                     (mult dtx Eu (minus Ev Gv))
+                     (mult dty Ev (minus Ev Jv))
                      (mult dtyrho (minus Hp Jp))
                      (mult dtx2nu Fv)
                      (mult dtx2nu Gv)
@@ -572,6 +568,6 @@
             y (range 1 upper_y)]
       (clx/set uu x y (sel u_core (dec x) (dec y)))
       (clx/set vv x y (sel v_core (dec x) (dec y))))
-    (doseq [x (range (:nx m))]
+    (doseq [x (range upper_x)]
       (clx/set uu x upper_y 1.))
   [uu vv p]))

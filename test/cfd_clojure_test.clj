@@ -891,16 +891,16 @@
         v0 (matrix 0. nx ny)
         p0 (matrix 0. nx ny)
 
-;;         w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
+        w (take (inc nt) (discretize-2D cavity-flow-2D m [u0 v0 p0]))
 
-;;         u (map first w)
-;;         v (map second w)
-;;         p (map last w)
-;;         u_nt (last u)
+        u (map first w)
+        v (map second w)
+        p (map last w)
+        u_nt (last u)
         u_nt_py (:u_nt res)
-;;         v_nt (last v)
+        v_nt (last v)
         v_nt_py (:v_nt res)
-;;         p_nt (last p)
+        p_nt (last p)
         p_nt_py (:p_nt res)
 
         b_nt (buildup-b m [u_nt_py v_nt_py])
@@ -933,18 +933,17 @@
     (fact "p py/clj" :step11
           (format-zz p_py 5) => (format-zz (:p_py res) 5))
 
+    (fact "u0, v0, p0" :step11
+          [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
 
-;;     (fact "u0, v0, p0" :step11
-;;           [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
-;;
-;;     (fact "u" :step11
-;;           u_nt => u_nt_py)
-;;
-;;     (fact "v" :step11
-;;           v_nt => v_nt_py)
-;;
-;;     (fact "p" :step11
-;;           p_nt => p_nt_py)
+    (fact "u" :step11
+          (format-zz u_nt 5) => (format-zz u_nt_py 5))
+
+    (fact "v" :step11
+          (format-zz v_nt 5) => (format-zz v_nt_py 5))
+
+    (fact "p" :step11
+          (format-zz p_nt 5) => (format-zz p_nt_py 5))
 
            ))
 
@@ -988,15 +987,11 @@
         Gu (G un upper_x upper_y)
         Hu (H un upper_x upper_y)
         Ju (J un upper_x upper_y)
-        Eu-Gu (minus Eu Gu)
-        Eu-Ju (minus Eu Ju)
         Ev (E vn upper_x upper_y)
         Fv (F vn upper_x upper_y)
         Gv (G vn upper_x upper_y)
         Hv (H vn upper_x upper_y)
         Jv (J vn upper_x upper_y)
-        Ev-Gv (minus Ev Gv)
-        Ev-Jv (minus Ev Jv)
         Fp (F p upper_x upper_y)
         Gp (G p upper_x upper_y)
         Hp (H p upper_x upper_y)
@@ -1005,19 +1000,27 @@
         dty (* -1. (/ (:dt m) (:dy m)))
         dtxrho (/ dtx (* 2. (:rho m)))
         dtyrho (/ dty (* 2. (:rho m)))
-        dtx2nu (/ (* (:nu m) (:dx m)) (math/expt (:dx m) 2.))
-        dty2nu (/ (* (:nu m) (:dy m)) (math/expt (:dy m) 2.))
+        dtx2nu (/ (* (:nu m) (:dt m)) (* (:dx m) (:dx m)))
+        dty2nu (/ (* (:nu m) (:dt m)) (* (:dy m) (:dy m)))
+
+;; u[1:-1,1:-1] = Eu-\
+;;     Eu*dt/dx*(Eu-Gu)-\
+;;     Ev*dt/dy*(Eu-Ju)-\
+;;     dt/(2*rho*dx)*(Fp-Gp)+\
+;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
+;;     dt/dy**2*(Hu-2*Eu+Ju))
+
         u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu)
-                     (mult dtx Eu Eu-Gu)
-                     (mult dty Ev Eu-Ju)
+                     (mult dtx Eu (minus Eu Gu))
+                     (mult dty Ev (minus Eu Ju))
                      (mult dtxrho (minus Fp Gp))
                      (mult dtx2nu Fu)
                      (mult dtx2nu Gu)
                      (mult dty2nu Hu)
                      (mult dty2nu Ju))
         v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev)
-                     (mult dtx Eu Ev-Gv)
-                     (mult dty Ev Ev-Jv)
+                     (mult dtx Eu (minus Ev Gv))
+                     (mult dty Ev (minus Ev Jv))
                      (mult dtyrho (minus Hp Jp))
                      (mult dtx2nu Fv)
                      (mult dtx2nu Gv)
@@ -1029,12 +1032,12 @@
             y (range 1 upper_y)]
       (clx/set uu x y (sel u_core (dec x) (dec y)))
       (clx/set vv x y (sel v_core (dec x) (dec y))))
-    (doseq [x (range (:nx m))]
+    (doseq [x (range upper_x)]
       (clx/set uu x upper_y 1.))
-  [uu vv p]))
+  [uu vv]))
 
 
-(defn test-1-cavity-flow-2D [nx ny nt dt nit rho nu]
+(defn test-tweaked-cavity-flow-2D [nx ny nt dt nit rho nu]
   (let [upper_x (dec nx) ; rows
         upper_y (dec ny) ; cols
         dx (/ 2. (dec nx))
@@ -1049,29 +1052,20 @@
         u0 (:u0 res)
         v0 (:v0 res)
         p0 (:p0 res)
-        b0 (buildup-b m [u0 v0])
-        b0_py (sel (sel (:b0 res) :except-rows upper_x :except-cols upper_y)
-                     :except-rows 0   :except-cols 0)
 
-        w (take (inc nt) (discretize-2D tweaked-cavity-flow-2D m [u0 v0 p0]))
+        [u_nt v_nt] (tweaked-cavity-flow-2D m [u0 v0 p0])
 
-        u (map first w)
-        v (map second w)
-        p (map last w)
-        u_nt (last u)
+;;         u (map first w)
+;;         v (map second w)
+;;         p (map last w)
+;;         u_nt (last u)
         u_nt_py (:u_nt res)
-        v_nt (last v)
+;;         v_nt (last v)
         v_nt_py (:v_nt res)
-        p_nt (last p)
-        p_nt_py (:p_nt res)
+;;         p_nt (last p)
+;;         p_nt_py (:p_nt res)
+        ]
 
-        b_nt (buildup-b m [u_nt_py v_nt_py])
-        b_nt_py (sel (sel (:b_nt res) :except-rows upper_x :except-cols upper_y)
-                     :except-rows 0   :except-cols 0)
-
-        p_py (last (take
-                    (inc (:nit m))
-                    (iterate (partial pressure-poisson m b_nt_py) p_nt_py)))]
 
     (fact "params " :step11
           [nx dx ny dy nt dt nit rho nu]
@@ -1081,32 +1075,14 @@
               (:nit res)
               (:rho res) (:nu res)])
 
-    (fact "dimensions b_nt: nx-2, ny-2" :step11
-          [(count b_nt) (count (first b_nt))
-           (count b_nt_py) (count (first b_nt_py))]
-          => [(- nx 2) (- ny 2) (- nx 2) (- ny 2)])
-    (fact "b0 b_nt" :step11
-          [(format-zz b0 7) (format-zz b0 7)] => [(format-zz b0_py 7) (format-zz b_nt_py 7)])
-
-    (fact "dimensions p_py: nx, ny" :step11
-          [nt (count p_py) (count (first p_py))
-           (count (:p_py res)) (count (first (:p_py res)))]
-          => [(:nt res) nx ny nx ny])
-    (fact "p py/clj" :step11
-          (format-zz p_py 5) => (format-zz (:p_py res) 5))
-
-
-    (fact "u0, v0, p0" :step11
-          [(first u) (first v) (first p)] => [(:u0 res) (:v0 res) (:p0 res)])
+;;     (fact "consistency check: u0 != u_nt" :step11
+;;           (format-zz u0 7) =not=> (format-zz u_nt_py 7))
 
     (fact "u" :step11
-          (format-zz u_nt 5) => (format-zz u_nt_py 5))
-;;
-;;     (fact "v" :step11
-;;           v_nt => v_nt_py)
-;;
-;;     (fact "p" :step11
-;;           p_nt => p_nt_py)
+          (format-zz u_nt 7) => (format-zz u_nt_py 7))
+
+    (fact "v" :step11
+          (format-zz v_nt 7) => (format-zz v_nt_py 7))
 
            ))
 
@@ -1115,9 +1091,13 @@
 (fact
  "Step 11: Cavity Flow with Navier-Stokes" :step11
  (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
- (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
- (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
- (test-1-cavity-flow-2D 21 21   1 0.001 50 1. 0.1)
+
+ ;; numerically correct, but runtime issue:
+ ;;
+ ;;  (test-cavitiy-flow-2D 41 41 200 0.001 50 1. 0.1)
+ ;;  (test-cavitiy-flow-2D 41 41 700 0.001 50 1. 0.1)
+
+ (test-tweaked-cavity-flow-2D 21 21 1 0.001 50 1. 0.1)
  )
 
 

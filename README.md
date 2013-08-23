@@ -15,6 +15,7 @@ Prof. Lorena Barba, Dr. Rio Yokota, [CFD Python: 12 steps to Navier-Stokes](http
 - Step 8: Burgers' Equation 2D
 - Step 9: 2D Laplace Equation
 - Step 10: 2D Poisson Equation
+- Step 11: Cavity Flow with Navier-Stokes
 
 ### How to run the models
 
