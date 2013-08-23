@@ -140,7 +140,7 @@ def cavityFlow(nt, u, v, dt, dx, dy, p, rho, nu):
 
         u[0,:] = 0
         u[:,0] = 0
-        u[:,-1] = 1
+        u[:,-1] = 1  ## in last line overwritten below
         v[0,:] = 0
         v[-1,:]=0
         v[:,0] = 0
