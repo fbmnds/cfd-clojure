@@ -1,0 +1,60 @@
+    ; nREPL 0.1.8-preview
+user> (defn array? [x] (-> x class .isArray))
+(defn see [x] (if (array? x) (map see x) x))
+#'user/array?
+#'user/see
+user> (defn array? [x] (-> x class .isArray))
+(defn see [x] (if (array? x) (map see x) x))
+#'user/array?
+#'user/see
+user> (see (into-array (map (partial into-array Double/TYPE) [[1 2 3 4] [5 6]])))
+((1.0 2.0 3.0 4.0) (5.0 6.0))
+user> (def dd (make-array Double/TYPE 1000 1000))
+#'user/dd
+user> (time (dotimes [i 1000] (dotimes [j 1000] (aget dd i j))))
+"Elapsed time: 43350.836228 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (-> dd (aget i) (aget j)))))
+"Elapsed time: 54999.529916 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (let [#^doubles a (aget #^objects dd i)] (aget a j)))))
+"Elapsed time: 47.983215 msecs"
+nil
+user> (defmacro deep-aget
+  ([hint array idx]
+    `(aget ~(vary-meta array assoc :tag hint) ~idx))
+  ([hint array idx & idxs]
+    `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~idx)]
+       (deep-aget ~hint a# ~@idxs))))
+#'user/deep-aget
+user> (time (dotimes [i 1000] (dotimes [j 1000] (deep-aget doubles dd i j))))
+"Elapsed time: 43.228908 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (aset dd i j 42.0))))
+"Elapsed time: 34435.986449 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (-> #^objects dd (aget i) (aset j 42.0)))))
+"Elapsed time: 40955.417301 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (let [#^doubles a (aget #^objects dd i)] (aset a j 42.0)))))
+"Elapsed time: 48.163293 msecs"
+nil
+user> (time (dotimes [i 1000] (dotimes [j 1000] (let [#^doubles a (aget #^objects dd i)] (aset a j (double 42.0))))))
+"Elapsed time: 48.795918 msecs"
+nil
+user> (defmacro deep-aset [hint array & idxsv]
+  (let [hints '{doubles double ints int} ; writing a comprehensive map is left as an exercise to the reader
+        [v idx & sxdi] (reverse idxsv)
+        idxs (reverse sxdi)
+        v (if-let [h (hints hint)] (list h v) v)
+        nested-array (if (seq idxs)
+                       `(deep-aget ~'objects ~array ~@idxs)
+                        array)
+        a-sym (with-meta (gensym "a") {:tag hint})]
+      `(let [~a-sym ~nested-array]
+         (aset ~a-sym ~idx ~v))))
+#'user/deep-aset
+user> (time (dotimes [i 1000] (dotimes [j 1000] (deep-aset doubles dd i j 42.0))))
+"Elapsed time: 48.905419 msecs"
+nil
+user>
