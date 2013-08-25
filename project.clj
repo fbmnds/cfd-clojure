@@ -26,6 +26,7 @@
 
                  [org.clojure/data.json "0.2.2"]]
 
-  :profiles {:dev {:dependencies [[midje "1.5.1"]]}}
+  :profiles {:dev {:dependencies [[midje "1.5.1"]]
+                   :plugins [[lein-midje "3.1.0"]]}}
   :jvm-opts ["-Xmx2048M"]
   :repl-options {:port 4555})
