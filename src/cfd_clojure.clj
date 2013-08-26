@@ -407,54 +407,65 @@
    `(DoubleMatrix. ~nx ~ny ~M))
 
 
+;; ;; http://clj-me.cgrand.net/2009/10/15/multidim-arrays/
+;; ;;
+;; (defmacro deep-aget
+;;   ([hint array idx]
+;;     `(aget ~(vary-meta array assoc :tag hint) ~idx))
+;;   ([hint array idx & idxs]
+;;     `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~idx)]
+;;        (deep-aget ~hint a# ~@idxs))))
+;; ;;
+;; (defmacro deep-aset [hint array & idxsv]
+;;   (let [hints '{doubles double ints int} ; writing a comprehensive map is left as an exercise to the reader
+;;         [v idx & sxdi] (reverse idxsv)
+;;         idxs (reverse sxdi)
+;;         v (if-let [h (hints hint)] (list h v) v)
+;;         nested-array (if (seq idxs)
+;;                        `(deep-aget ~'objects ~array ~@idxs)
+;;                         array)
+;;         a-sym (with-meta (gensym "a") {:tag hint})]
+;;       `(let [~a-sym ~nested-array]
+;;          (aset ~a-sym ~idx ~v))))
+;;
+;; (defmacro aget! [M i j]
+;;   `(deep-aget ~'doubles ~M ~i ~j))
+;;
+;; (defmacro aset! [M i j v]
+;;   `(deep-aset ~'doubles ~M ~i ~j ~v))
 
-;; (defmacro aget!
-;;   ([array y]      `(aget ~(vary-meta array assoc :tag 'doubles) ~y))
-;;   ([array x & ys] `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~@ys)]
-;;                      (aget! a# ~x))))
+;; http://www.bestinclass.dk/index.clj/2010/03/functional-fluid-dynamics-in-clojure.html
+;;
+(defmacro aget!
+  ([array y]      `(aget ~(vary-meta array assoc :tag 'doubles) ~y))
+  ([array x & ys] `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~@ys)]
+                     (aget! a# ~x))))
+;;
+(defmacro aset! [array x y v]
+  (let [nested-array `(aget ~(vary-meta array assoc :tag 'objects) ~y)
+        a-sym         (with-meta (gensym "a") {:tag 'doubles})]
+    `(let [~a-sym ~nested-array]
+       (aset ~a-sym ~x (double ~v)))))
 
 
 
-(defmacro deep-aget
-  ([hint array idx]
-    `(aget ~(vary-meta array assoc :tag hint) ~idx))
-  ([hint array idx & idxs]
-    `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~idx)]
-       (deep-aget ~hint a# ~@idxs))))
+(defn submatrix [M [[a nx] [b ny]]]
+  (let [m (clx/matrix (DoubleMatrix. nx ny (make-array Double/TYPE (* nx ny))))]
+    (dotimes [i nx]
+      (dotimes [j ny]
+        (clx/set m i j (clx/get M (+ a i) (+ b j)))))
+    m))
 
 
-(defmacro deep-aset [hint array & idxsv]
-  (let [hints '{doubles double ints int} ; writing a comprehensive map is left as an exercise to the reader
-        [v idx & sxdi] (reverse idxsv)
-        idxs (reverse sxdi)
-        v (if-let [h (hints hint)] (list h v) v)
-        nested-array (if (seq idxs)
-                       `(deep-aget ~'objects ~array ~@idxs)
-                        array)
-        a-sym (with-meta (gensym "a") {:tag hint})]
-      `(let [~a-sym ~nested-array]
-         (aset ~a-sym ~idx ~v))))
-
-
-(defn aget! [M i j]
-  (deep-aget doubles M i j))
-
-(defn aset! [M i j v]
-  (deep-aset doubles M i j v))
-
+(defn submatrix2 [M [[a nx] [b ny]]]
+  (let [m (make-array Double/TYPE nx ny)]
+    (dotimes [i nx]
+      (dotimes [j ny]
+        (aset! m i j (clx/get M (+ a i) (+ b j)))))
+    (clx/matrix (DoubleMatrix. ^"[[D" m))))
 
 ;; (defn submatrix [M [[a len_x] [b len_y]]]
-;;   (let [m (make-array Double/TYPE len_x len_y)
-;;         _ (println "class M " (class M))
-;;         _ (println "class m " (class m))
-;;         ]
-;;     (doseq [i (range len_x)
-;;             j (range len_y)]
-;;       (aset! m i j (clx/get M (+ a i) (+ b j))))
-;;     (DoubleMatrix. len_x len_y m)))
-
-(defn submatrix [M [[a len_x] [b len_y]]]
-  (clx/from-indices len_x len_y (fn [i j] (clx/get M (+ a i) (+ b j)))))
+;;   (clx/from-indices len_x len_y (fn [i j] (clx/get M (+ a i) (+ b j)))))
 
 
 (defmacro E [z len_x len_y]

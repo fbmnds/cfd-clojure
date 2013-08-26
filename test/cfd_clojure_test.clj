@@ -996,10 +996,10 @@
         vv (make-array Double/TYPE nx ny)]
     (dotimes [x nx-2]
       (dotimes [y ny-2]
-        (deep-aset doubles uu (inc x) (inc y) (clx/get u_core x y))
-        (deep-aset doubles vv (inc x) (inc y) (clx/get v_core x y))))
+        (aset! uu (inc x) (inc y) (clx/get u_core x y))
+        (aset! vv (inc x) (inc y) (clx/get v_core x y))))
     (dotimes [x nx]
-      (deep-aset doubles uu x ny-1 1.))
+      (aset! uu x ny-1 1.))
     [uu vv]))
 
 
