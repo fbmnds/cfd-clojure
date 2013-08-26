@@ -20,9 +20,12 @@
                                org.clojure/clojure-contrib]]
                  [jline "0.9.94"]
 
-                 [clatrix "0.3.0"]
-
                  [mikera/matrix-api "0.0.4"]
+
+                 [clatrix "0.3.0"]
+                 [org.jblas/jblas "1.2.3"]
+                 [net.mikera/core.matrix "0.7.2"]
+                 [slingshot "0.10.3"]
 
                  [org.clojure/data.json "0.2.2"]]
 

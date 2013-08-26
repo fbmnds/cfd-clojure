@@ -3,7 +3,8 @@
             [clojure.core.match :as m]
             [clatrix.core :as clx]
             [clojure.core.matrix :as M])
-  (:use (incanter core charts)))
+  (:use (incanter core charts))
+  (:import [org.jblas DoubleMatrix]))
 
 
 (set! *warn-on-reflection* true)
@@ -382,141 +383,170 @@
 
 ;;; Step 11: Cavity Flow with Navier-Stokes
 
-(defmacro E [z upper_x upper_y]
-  `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
-        :except-rows 0 :except-cols 0))
-
-(defmacro F [z upper_x upper_y]
-  `(sel (sel ~z :except-rows 0 :except-cols ~upper_y)
-        :except-rows 0 :except-cols 0))
-
-(defmacro G [z upper_x upper_y]
-  `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
-        :except-rows (dec ~upper_x) :except-cols 0))
-
-(defmacro H [z upper_x upper_y]
-  `(sel (sel ~z :except-rows ~upper_x :except-cols 0)
-        :except-rows 0 :except-cols 0))
-
-(defmacro J [z upper_x upper_y]
-  `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
-        :except-rows 0 :except-cols (dec ~upper_y)))
-
-
-;; z[1:-1,1:-1] ; Ez :except-rows  first     last    :except-cols  first     last
-;; z[2:,1:-1]   ; Fz :except-rows  first     second  :except-cols  first     last
-;; z[0:-2,1:-1] ; Gz :except-rows  prev-last last    :except-cols  first     last
-;; z[1:-1,2:]   ; Hz :except-rows  first     last    :except-cols  first     second
-;; z[1:-1,0:-2] ; Jz :except-rows  first     last    :except-cols  prev-last last
+;; (defmacro E [z upper_x upper_y]
+;;   `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
+;;         :except-rows 0 :except-cols 0))
 ;;
-;; b[1:-1,1:-1]=rho*(1/dt*((u[2:,1:-1]-u[0:-2,1:-1])/(2*dx)+(v[1:-1,2:]-v[1:-1,0:-2])/(2*dy))-\
-;;           ((u[2:,1:-1]-u[0:-2,1:-1])/(2*dx))**2-\
-;;           2*((u[1:-1,2:]-u[1:-1,0:-2])/(2*dy)*(v[2:,1:-1]-v[0:-2,1:-1])/(2*dx))-\
-;;           ((v[1:-1,2:]-v[1:-1,0:-2])/(2*dy))**2)
+;; (defmacro F [z upper_x upper_y]
+;;   `(sel (sel ~z :except-rows 0 :except-cols ~upper_y)
+;;         :except-rows 0 :except-cols 0))
 ;;
-;; b[1:-1,1:-1]=rho*(1/dt*((Fu-Gu)/(2*dx)+(Hv-Jv)/(2*dy))-\
-;;             ((Fu-Gu)/(2*dx))**2-\
-;;             2*((Hu-Ju)/(2*dy)*(Fv-Gv)/(2*dx))-\
-;;             ((Hv-Jv)/(2*dy))**2)
+;; (defmacro G [z upper_x upper_y]
+;;   `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
+;;         :except-rows (dec ~upper_x) :except-cols 0))
 ;;
-;; b[1:-1,1:-1]=1/dt*( (Fu-Gu)/(2*dx) + (Hv-Jv)/(2*dy) )-( (Fu-Gu)/(2*dx) )**2-\
-;;                 2*( (Hu-Ju)/(2*dy) * (Fv-Gv)/(2*dx) )-( (Hv-Jv)/(2*dy) )**2
+;; (defmacro H [z upper_x upper_y]
+;;   `(sel (sel ~z :except-rows ~upper_x :except-cols 0)
+;;         :except-rows 0 :except-cols 0))
+;;
+;; (defmacro J [z upper_x upper_y]
+;;   `(sel (sel ~z :except-rows ~upper_x :except-cols ~upper_y)
+;;         :except-rows 0 :except-cols (dec ~upper_y)))
 
-(defn buildup-b [m [un vn]]   ; treat rho as external factor
-  (let [upper_x (dec (:nx m)) ; rows
-        upper_y (dec (:ny m)) ; cols
-        Fu (F un upper_x upper_y)
-        Gu (G un upper_x upper_y)
-        Hu (H un upper_x upper_y)
-        Ju (J un upper_x upper_y)
-        Fv (F vn upper_x upper_y)
-        Gv (G vn upper_x upper_y)
-        Hv (H vn upper_x upper_y)
-        Jv (J vn upper_x upper_y)
-        Fu-Gu (minus Fu Gu)
-        Hu-Ju (minus Hu Ju)
-        Fv-Gv (minus Fv Gv)
-        Hv-Jv (minus Hv Jv)]
-    (plus (mult (/  1. (* 2. (:dt m) (:dx m))) Fu-Gu)
-          (mult (/  1. (* 2. (:dt m) (:dy m))) Hv-Jv)
-          (mult (/ -1. (math/expt (* 2. (:dx m)) 2.)) Fu-Gu Fu-Gu)
-          (mult (/ -1. (* 2. (:dx m) (:dy m))) Hu-Ju Fv-Gv)
-          (mult (/ -1. (math/expt (* 2. (:dy m)) 2.)) Hv-Jv Hv-Jv))))
+(defmacro coerce [nx ny M]
+   `(DoubleMatrix. ~nx ~ny ~M))
 
 
-;; pn[2:,1:-1]   ; Fp :except-rows  first     second  :except-cols  first     last
-;; pn[0:-2,1:-1] ; Gp :except-rows  prev-last last    :except-cols  first     last
-;; pn[1:-1,2:]   ; Hp :except-rows  first     last    :except-cols  first     second
-;; pn[1:-1,0:-2] ; Jp :except-rows  first     last    :except-cols  prev-last last
-;;
-;; p[1:-1,1:-1] = ((Fp+Gp)*dy**2+(Hp+Jp)*dx**2)/(2*(dx**2+dy**2)) -\
-;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
-;;
-;; p[1:-1,1:-1] = ((pn[2:,1:-1]+pn[0:-2,1:-1])*dy**2+(pn[1:-1,2:]+pn[1:-1,0:-2])*dx**2)/\
-;;         (2*(dx**2+dy**2)) -\
-;;         dx**2*dy**2/(2*(dx**2+dy**2))*b[1:-1,1:-1]
-;;
-;; p[-1,:] =p[-2,:]		##dp/dy = 0 at y = 2
-;; p[0,:] = p[1,:]         ##dp/dy = 0 at y = 0
-;; p[:,0]=p[:,1]              ##dp/dx = 0 at x = 0
-;; p[:,-1]=0                      ##p = 0 at x = 2
+
+;; (defmacro aget!
+;;   ([array y]      `(aget ~(vary-meta array assoc :tag 'doubles) ~y))
+;;   ([array x & ys] `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~@ys)]
+;;                      (aget! a# ~x))))
+
+
+
+(defmacro deep-aget
+  ([hint array idx]
+    `(aget ~(vary-meta array assoc :tag hint) ~idx))
+  ([hint array idx & idxs]
+    `(let [a# (aget ~(vary-meta array assoc :tag 'objects) ~idx)]
+       (deep-aget ~hint a# ~@idxs))))
+
+
+(defmacro deep-aset [hint array & idxsv]
+  (let [hints '{doubles double ints int} ; writing a comprehensive map is left as an exercise to the reader
+        [v idx & sxdi] (reverse idxsv)
+        idxs (reverse sxdi)
+        v (if-let [h (hints hint)] (list h v) v)
+        nested-array (if (seq idxs)
+                       `(deep-aget ~'objects ~array ~@idxs)
+                        array)
+        a-sym (with-meta (gensym "a") {:tag hint})]
+      `(let [~a-sym ~nested-array]
+         (aset ~a-sym ~idx ~v))))
+
+
+(defn aget! [M i j]
+  (deep-aget doubles M i j))
+
+(defn aset! [M i j v]
+  (deep-aset doubles M i j v))
+
+
+;; (defn submatrix [M [[a len_x] [b len_y]]]
+;;   (let [m (make-array Double/TYPE len_x len_y)
+;;         _ (println "class M " (class M))
+;;         _ (println "class m " (class m))
+;;         ]
+;;     (doseq [i (range len_x)
+;;             j (range len_y)]
+;;       (aset! m i j (clx/get M (+ a i) (+ b j))))
+;;     (DoubleMatrix. len_x len_y m)))
+
+(defn submatrix [M [[a len_x] [b len_y]]]
+  (clx/from-indices len_x len_y (fn [i j] (clx/get M (+ a i) (+ b j)))))
+
+
+(defmacro E [z len_x len_y]
+  `(submatrix ~z [[1 ~len_x] [1 ~len_y]]))
+
+(defmacro F [z len_x len_y]
+  `(submatrix ~z [[2 ~len_x] [1 ~len_y]]))
+
+(defmacro G [z len_x len_y]
+  `(submatrix ~z [[0 ~len_x] [1 ~len_y]]))
+
+(defmacro H [z len_x len_y]
+  `(submatrix ~z [[1 ~len_x] [2 ~len_y]]))
+
+(defmacro J [z len_x len_y]
+  `(submatrix ~z [[1 ~len_x] [0 ~len_y]]))
+
+
+;; (defn sc-* [x M len_x len_y]
+;;   (let [xM (make-array Double/TYPE len_x len_y)]
+;;     (doseq [i (range len_x)
+;;             j (range len_y)]
+;;       (aset! xM i j (* x (aget! M i j))))
+;;     (coerce len_x len_y xM)))
+
+(defn sc-* [x M nx ny]
+  (clx/from-indices nx ny (fn [i j] (* x (clx/get M i j)))))
+
+
+(defn buildup-b [m [un vn]] ; treat rho as external factor
+  (let [nx-2 (- (:nx m) 2) ; rows
+        ny-2 (- (:ny m) 2) ; cols
+        Fu (F un nx-2 ny-2)
+        Gu (G un nx-2 ny-2)
+        Hu (H un nx-2 ny-2)
+        Ju (J un nx-2 ny-2)
+        Fv (F vn nx-2 ny-2)
+        Gv (G vn nx-2 ny-2)
+        Hv (H vn nx-2 ny-2)
+        Jv (J vn nx-2 ny-2)
+        Fu-Gu (clx/- Fu Gu)
+        Hu-Ju (clx/- Hu Ju)
+        Fv-Gv (clx/- Fv Gv)
+        Hv-Jv (clx/- Hv Jv)]
+    (clx/+ (sc-* (/  1. (* 2. (:dt m) (:dx m))) Fu-Gu nx-2 ny-2)
+           (sc-* (/  1. (* 2. (:dt m) (:dy m))) Hv-Jv nx-2 ny-2)
+           (sc-* (/ -1. (* 2. (:dx m) (:dx m))) (clx/* Fu-Gu Fu-Gu) nx-2 ny-2)
+           (sc-* (/ -1. (* 2. (:dx m) (:dy m))) (clx/* Hu-Ju Fv-Gv) nx-2 ny-2)
+           (sc-* (/ -1. (* 2. (:dy m) (:dy m))) (clx/* Hv-Jv Hv-Jv) nx-2 ny-2))))
 
 
 (defn pressure-poisson [m bn pn]
-  (let [upper_x (dec (:nx m)) ; rows
-        upper_y (dec (:ny m)) ; cols
-        F (M/submatrix pn [[2 (dec upper_x)] [1 (dec upper_y)]])
-        G (M/submatrix pn [[0 (dec upper_x)] [1 (dec upper_y)]])
-        H (M/submatrix pn [[1 (dec upper_x)] [2 (dec upper_y)]])
-        J (M/submatrix pn [[1 (dec upper_x)] [0 (dec upper_y)]])
-        dx2 (math/expt (:dx m) 2.)
-        dy2 (math/expt (:dy m) 2.)
+  (let [nx (:nx m)   ; rows
+        ny (:ny m)   ; cols
+        nx-1 (dec nx)
+        ny-1 (dec ny)
+        nx-2 (dec nx-1)
+        ny-2 (dec ny-1)
+        F (F pn nx-2 ny-2)
+        G (G pn nx-2 ny-2)
+        H (H pn nx-2 ny-2)
+        J (J pn nx-2 ny-2)
+        dx2 (* (:dx m) (:dx m))
+        dy2 (* (:dy m) (:dy m))
         edxdy (* 2. (+ dx2 dy2))
         dxx (/ dx2 edxdy)
         dyy (/ dy2 edxdy)
-        p_core (plus (M/mul dyy (M/add F G))
-                     (M/mul dxx (M/add H J))
-                     (M/mul (* -1. dx2 dyy) bn))
-        p (matrix 0. (inc upper_x) (inc upper_y))]
-    (doseq [x (range 1 upper_x)
-            y (range 1 upper_y)]
-      (clx/set p x y (sel p_core (dec x) (dec y))))
-    (doseq [y (range (inc upper_y))]
-      (clx/set p 0 y (sel p 1 y))
-      (clx/set p upper_x y (sel p (dec upper_x) y)))
-    (doseq [x (range (inc upper_x))]
-      (clx/set p x 0 (sel p x 1))
-      (clx/set p x upper_y 0.))
-    p))
-
-
-;; z[1:-1,1:-1] ; Ez :except-rows  first     last    :except-cols  first     last
-;; z[2:,1:-1]   ; Fz :except-rows  first     second  :except-cols  first     last
-;; z[0:-2,1:-1] ; Gz :except-rows  prev-last last    :except-cols  first     last
-;; z[1:-1,2:]   ; Hz :except-rows  first     last    :except-cols  first     second
-;; z[1:-1,0:-2] ; Jz :except-rows  first     last    :except-cols  prev-last last
-;;
-;; u[1:-1,1:-1] = Eu-\
-;;     Eu*dt/dx*(Eu-Gu)-\
-;;     Ev*dt/dy*(Eu-Ju)-\
-;;     dt/(2*rho*dx)*(Fp-Gp)+\
-;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
-;;     dt/dy**2*(Hu-2*Eu+Ju))
-;;
-;; v[1:-1,1:-1] = Ev-\
-;;     Eu*dt/dx*(Ev-Gv)-\
-;;     Ev*dt/dy*(Ev-Gv)-\
-;;     dt/(2*rho*dy)*(Fp-Gp)+\
-;;     nu*(dt/dx**2*(Fv-2*Ev+Gv)+\
-;;     (dt/dy**2*(Hv-2*Ev+Jv)))
-
+        p_core (clx/+ (sc-* dyy (clx/+ F G) nx-2 ny-2)
+                      (sc-* dxx (clx/+ H J) nx-2 ny-2)
+                      (sc-* (* -1. dx2 dyy) bn nx-2 ny-2))
+        p (make-array Double/TYPE nx ny)]
+    (doseq [x (range 1 nx-1)
+            y (range 1 ny-1)]
+      (clx/set p x y (clx/get p_core (dec x) (dec y))))
+    (doseq [y (range ny)]
+      (clx/set p 0 y (clx/get p 1 y))
+      (clx/set p nx-1 y (clx/get p nx-2 y)))
+    (doseq [x (range nx)]
+      (clx/set p x 0 (clx/get p x 1))
+      (clx/set p x ny-1 0.))
+    (coerce nx ny p)))
 
 
 
 (defn cavity-flow-2D [m [un vn pn]]
-  (let [upper_x (dec (:nx m))
-        upper_y (dec (:ny m))
-        b (mult (:rho m) (buildup-b m [un vn]))
+  (let [nx (:nx m)
+        ny (:ny m)
+        nx-1 (dec nx)
+        ny-1 (dec ny)
+        nx-2 (dec nx-1)
+        ny-2 (dec ny-1)
+        b (clx/* (:rho m) (buildup-b m [un vn]))
         ;;_ (println "before p, nt = " (:nt m))
         p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
         ;; p ((apply comp (repeat (inc (:nit m)) (partial pressure-poisson m b))) pn)
@@ -526,48 +556,50 @@
         ;;       p
         ;;       (recur (dec n) ((partial pressure-poisson m b) p))))
         ;;_ (println "after p")
-        Eu (E un upper_x upper_y)
-        Fu (F un upper_x upper_y)
-        Gu (G un upper_x upper_y)
-        Hu (H un upper_x upper_y)
-        Ju (J un upper_x upper_y)
-        Ev (E vn upper_x upper_y)
-        Fv (F vn upper_x upper_y)
-        Gv (G vn upper_x upper_y)
-        Hv (H vn upper_x upper_y)
-        Jv (J vn upper_x upper_y)
-        Fp (F p upper_x upper_y)
-        Gp (G p upper_x upper_y)
-        Hp (H p upper_x upper_y)
-        Jp (J p upper_x upper_y)
+        Eu (E un nx-2 ny-2)
+        Fu (F un nx-2 ny-2)
+        Gu (G un nx-2 ny-2)
+        Hu (H un nx-2 ny-2)
+        Ju (J un nx-2 ny-2)
+        Ev (E vn nx-2 ny-2)
+        Fv (F vn nx-2 ny-2)
+        Gv (G vn nx-2 ny-2)
+        Hv (H vn nx-2 ny-2)
+        Jv (J vn nx-2 ny-2)
+        Fp (F p nx-2 ny-2)
+        Gp (G p nx-2 ny-2)
+        Hp (H p nx-2 ny-2)
+        Jp (J p nx-2 ny-2)
         dtx (* -1. (/ (:dt m) (:dx m)))
         dty (* -1. (/ (:dt m) (:dy m)))
         dtxrho (/ dtx (* 2. (:rho m)))
         dtyrho (/ dty (* 2. (:rho m)))
         dtx2nu (/ (* (:nu m) (:dt m)) (* (:dx m) (:dx m)))
         dty2nu (/ (* (:nu m) (:dt m)) (* (:dy m) (:dy m)))
-        u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu)
-                     (mult dtx Eu (minus Eu Gu))
-                     (mult dty Ev (minus Eu Ju))
-                     (mult dtxrho (minus Fp Gp))
-                     (mult dtx2nu Fu)
-                     (mult dtx2nu Gu)
-                     (mult dty2nu Hu)
-                     (mult dty2nu Ju))
-        v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev)
-                     (mult dtx Eu (minus Ev Gv))
-                     (mult dty Ev (minus Ev Jv))
-                     (mult dtyrho (minus Hp Jp))
-                     (mult dtx2nu Fv)
-                     (mult dtx2nu Gv)
-                     (mult dty2nu Hv)
-                     (mult dty2nu Jv))
-        uu (matrix 0. (:nx m) (:ny m))
-        vv (matrix 0. (:nx m) (:ny m))]
-    (doseq [x (range 1 upper_x)
-            y (range 1 upper_y)]
-      (clx/set uu x y (sel u_core (dec x) (dec y)))
-      (clx/set vv x y (sel v_core (dec x) (dec y))))
-    (doseq [x (range upper_x)]
-      (clx/set uu x upper_y 1.))
-  [uu vv p]))
+        u_core (clx/+ (sc-* (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu nx-2 ny-2)
+                     (clx/* (sc-* dtx Eu nx-2 ny-2) (clx/- Eu Gu))
+                     (clx/* dty Ev (clx/- Eu Ju))
+                     (sc-* dtxrho (clx/- Fp Gp) nx-2 ny-2)
+                     (sc-* dtx2nu Fu nx-2 ny-2)
+                     (sc-* dtx2nu Gu nx-2 ny-2)
+                     (sc-* dty2nu Hu nx-2 ny-2)
+                     (sc-* dty2nu Ju nx-2 ny-2))
+        v_core (clx/+ (sc-* (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev nx-2 ny-2)
+                     (clx/* (sc-* dtx Eu nx-2 ny-2) (clx/- Ev Gv))
+                     (clx/* (sc-* dty Ev nx-2 ny-2) (clx/- Ev Jv))
+                     (sc-* dtyrho (clx/- Hp Jp) nx-2 ny-2)
+                     (sc-* dtx2nu Fv nx-2 ny-2)
+                     (sc-* dtx2nu Gv nx-2 ny-2)
+                     (sc-* dty2nu Hv nx-2 ny-2)
+                     (sc-* dty2nu Jv nx-2 ny-2))
+        uu (make-array Double/TYPE nx ny)
+        vv (make-array Double/TYPE nx ny)]
+    (doseq [x (range 1 nx-1)
+            y (range 1 ny-1)]
+      (clx/set uu x y (clx/get u_core (dec x) (dec y)))
+      (clx/set vv x y (clx/get v_core (dec x) (dec y))))
+    (doseq [x (range nx-1)]
+      (clx/set uu x ny-1 1.))
+    [(coerce nx ny uu)
+     (coerce nx ny vv)
+     (coerce nx ny p)]))
