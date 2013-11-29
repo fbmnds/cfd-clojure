@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [clojure.math.numeric-tower :as math]
             [clatrix.core :as clx]
+            [clojure.core.matrix :as M]
             [clojure.core.match :as m]))
 
 (import 'java.io.FileOutputStream)
@@ -948,99 +949,62 @@
            ))
 
 
-;; z[1:-1,1:-1] ; Ez :except-rows  first     last    :except-cols  first     last
-;; z[2:,1:-1]   ; Fz :except-rows  first     second  :except-cols  first     last
-;; z[0:-2,1:-1] ; Gz :except-rows  prev-last last    :except-cols  first     last
-;; z[1:-1,2:]   ; Hz :except-rows  first     last    :except-cols  first     second
-;; z[1:-1,0:-2] ; Jz :except-rows  first     last    :except-cols  prev-last last
-;;
-;; u[1:-1,1:-1] = Eu-\
-;;     Eu*dt/dx*(Eu-Gu)-\
-;;     Ev*dt/dy*(Eu-Ju)-\
-;;     dt/(2*rho*dx)*(Fp-Gp)+\
-;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
-;;     dt/dy**2*(Hu-2*Eu+Ju))
-;;
-;; v[1:-1,1:-1] = Ev-\
-;;     Eu*dt/dx*(Ev-Gv)-\
-;;     Ev*dt/dy*(Ev-Gv)-\
-;;     dt/(2*rho*dy)*(Fp-Gp)+\
-;;     nu*(dt/dx**2*(Fv-2*Ev+Gv)+\
-;;     (dt/dy**2*(Hv-2*Ev+Jv)))
-
-
-(defn tweaked-cavity-flow-2D [m [un vn pn]]
-  (let [upper_x (dec (:nx m))
-        upper_y (dec (:ny m))
-        ;;b (mult (:rho m) (buildup-b m [un vn]))
-        ;;_ (println "before p, nt = " (:nt m))
-        ;; p (last (take (inc (:nit m)) (iterate (partial pressure-poisson m b) pn)))
-        p pn ;;p ((apply comp (repeat (inc (:nit m)) (partial pressure-poisson m b))) pn)
-        ;; p (loop [n (:nit m)
-        ;;          p pn]
-        ;;     (if (< n 0)
-        ;;       p
-        ;;       (recur (dec n) ((partial pressure-poisson m b) p))))
-        ;;_ (println "after p")
-        Eu (E un upper_x upper_y)
-        Fu (F un upper_x upper_y)
-        Gu (G un upper_x upper_y)
-        Hu (H un upper_x upper_y)
-        Ju (J un upper_x upper_y)
-        Ev (E vn upper_x upper_y)
-        Fv (F vn upper_x upper_y)
-        Gv (G vn upper_x upper_y)
-        Hv (H vn upper_x upper_y)
-        Jv (J vn upper_x upper_y)
-        Fp (F p upper_x upper_y)
-        Gp (G p upper_x upper_y)
-        Hp (H p upper_x upper_y)
-        Jp (J p upper_x upper_y)
+(defn tweaked-cavity-flow-2D [m [un vn p]]
+  (let [nx (:nx m)
+        ny (:ny m)
+        nx-1 (dec nx)
+        ny-1 (dec ny)
+        nx-2 (dec nx-1)
+        ny-2 (dec ny-1)
+        Eu (E un nx-2 ny-2)
+        Fu (F un nx-2 ny-2)
+        Gu (G un nx-2 ny-2)
+        Hu (H un nx-2 ny-2)
+        Ju (J un nx-2 ny-2)
+        Ev (E vn nx-2 ny-2)
+        Fv (F vn nx-2 ny-2)
+        Gv (G vn nx-2 ny-2)
+        Hv (H vn nx-2 ny-2)
+        Jv (J vn nx-2 ny-2)
+        Fp (F p nx-2 ny-2)
+        Gp (G p nx-2 ny-2)
+        Hp (H p nx-2 ny-2)
+        Jp (J p nx-2 ny-2)
         dtx (* -1. (/ (:dt m) (:dx m)))
         dty (* -1. (/ (:dt m) (:dy m)))
         dtxrho (/ dtx (* 2. (:rho m)))
         dtyrho (/ dty (* 2. (:rho m)))
         dtx2nu (/ (* (:nu m) (:dt m)) (* (:dx m) (:dx m)))
         dty2nu (/ (* (:nu m) (:dt m)) (* (:dy m) (:dy m)))
-
-;; u[1:-1,1:-1] = Eu-\
-;;     Eu*dt/dx*(Eu-Gu)-\
-;;     Ev*dt/dy*(Eu-Ju)-\
-;;     dt/(2*rho*dx)*(Fp-Gp)+\
-;;     nu*(dt/dx**2*(Fu-2*Eu+Gu)+\
-;;     dt/dy**2*(Hu-2*Eu+Ju))
-
-        u_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu)
-                     (mult dtx Eu (minus Eu Gu))
-                     (mult dty Ev (minus Eu Ju))
-                     (mult dtxrho (minus Fp Gp))
-                     (mult dtx2nu Fu)
-                     (mult dtx2nu Gu)
-                     (mult dty2nu Hu)
-                     (mult dty2nu Ju))
-        v_core (plus (mult (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev)
-                     (mult dtx Eu (minus Ev Gv))
-                     (mult dty Ev (minus Ev Jv))
-                     (mult dtyrho (minus Hp Jp))
-                     (mult dtx2nu Fv)
-                     (mult dtx2nu Gv)
-                     (mult dty2nu Hv)
-                     (mult dty2nu Jv))
-        uu (matrix 0. (:nx m) (:ny m))
-        vv (matrix 0. (:nx m) (:ny m))]
-    (doseq [x (range 1 upper_x)
-            y (range 1 upper_y)]
-      (clx/set uu x y (sel u_core (dec x) (dec y)))
-      (clx/set vv x y (sel v_core (dec x) (dec y))))
-    (doseq [x (range upper_x)]
-      (clx/set uu x upper_y 1.))
-  [uu vv]))
+        u_core (clx/+ (sc-* (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Eu nx-2 ny-2)
+                      (clx/* (sc-* dtx Eu nx-2 ny-2) (clx/- Eu Gu))
+                      (clx/* dty Ev (clx/- Eu Ju))
+                      (sc-* dtxrho (clx/- Fp Gp) nx-2 ny-2)
+                      (sc-* dtx2nu Fu nx-2 ny-2)
+                      (sc-* dtx2nu Gu nx-2 ny-2)
+                      (sc-* dty2nu Hu nx-2 ny-2)
+                      (sc-* dty2nu Ju nx-2 ny-2))
+        v_core (clx/+ (sc-* (+ 1. (* -2. dtx2nu) (* -2. dty2nu)) Ev nx-2 ny-2)
+                      (clx/* (sc-* dtx Eu nx-2 ny-2) (clx/- Ev Gv))
+                      (clx/* (sc-* dty Ev nx-2 ny-2) (clx/- Ev Jv))
+                      (sc-* dtyrho (clx/- Hp Jp) nx-2 ny-2)
+                      (sc-* dtx2nu Fv nx-2 ny-2)
+                      (sc-* dtx2nu Gv nx-2 ny-2)
+                      (sc-* dty2nu Hv nx-2 ny-2)
+                      (sc-* dty2nu Jv nx-2 ny-2))
+        uu (make-array Double/TYPE nx ny)
+        vv (make-array Double/TYPE nx ny)]
+    (dotimes [x nx-2]
+      (dotimes [y ny-2]
+        (aset! uu (inc x) (inc y) (clx/get u_core x y))
+        (aset! vv (inc x) (inc y) (clx/get v_core x y))))
+    (dotimes [x nx]
+      (aset! uu x ny-1 1.))
+    [uu vv]))
 
 
 (defn test-tweaked-cavity-flow-2D [nx ny nt dt nit rho nu]
-  (let [upper_x (dec nx) ; rows
-        upper_y (dec ny) ; cols
-        dx (/ 2. (dec nx))
+  (let [dx (/ 2. (dec nx))
         dy (/ 2. (dec ny))
         res (json/read-json
              (slurp (str/join
@@ -1049,9 +1013,9 @@
            :ny ny :dy dy
            :nt nt :dt dt
            :nit nit :rho rho :nu nu}
-        u0 (:u0 res)
-        v0 (:v0 res)
-        p0 (:p0 res)
+        u0 (clx/matrix (:u0 res))
+        v0 (clx/matrix (:v0 res))
+        p0 (clx/matrix (:p0 res))
 
         [u_nt v_nt] (tweaked-cavity-flow-2D m [u0 v0 p0])
 
@@ -1082,15 +1046,13 @@
           (format-zz u_nt 7) => (format-zz u_nt_py 7))
 
     (fact "v" :step11
-          (format-zz v_nt 7) => (format-zz v_nt_py 7))
-
-           ))
+          (format-zz v_nt 7) => (format-zz v_nt_py 7))))
 
 
 
 (fact
  "Step 11: Cavity Flow with Navier-Stokes" :step11
- (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
+ ;; (test-cavitiy-flow-2D 21 21   3 0.001 50 1. 0.1)
 
  ;; numerically correct, but runtime issue:
  ;;
@@ -1099,7 +1061,6 @@
 
  (test-tweaked-cavity-flow-2D 21 21 1 0.001 50 1. 0.1)
  )
-
 
 
 ;; restore settings
