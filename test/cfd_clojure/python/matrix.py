@@ -49,3 +49,7 @@ print(u[:,0])
 
 print("u[:,-1] ; last col ")
 print(u[:,-1])
+
+
+print ("u**2 ")
+print (u**2)

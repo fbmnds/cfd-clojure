@@ -2,7 +2,7 @@
   (:require [clojure.math.numeric-tower :as math]
             [clojure.core.match :as m]
             [clatrix.core :as clx]
-            [clojure.core.matrix :as M])
+            [clojure.core.matrix :as M]y)
   (:use (incanter core charts))
   (:import [org.jblas DoubleMatrix]))
 
